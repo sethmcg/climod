@@ -1,0 +1,118 @@
+library(KernSmooth)
+library(devtools)
+load_all()
+check()
+
+R CMD Rd2pdf .
+
+
+
+DOCCO:
+
+R/cslice.R
+R/slice.R 
+
+distmap -> kddm
+
+add plot, print methods for cslice
+for plot.cslice - 2 lists -> matrices (pad w/NA) for mplot
+
+existing mplot -> mxyplot?
+mplot for more general plot of 2 lists?
+
+## integrate cslice into bias-correct.R #-># done and checked!
+
+
+some more todo items in ./bias-correct.R comments
+
+
+check docco - \link{} on @seealso?
+
+nc_ingest docco
+
+
+
+###########################
+====== FOR MULTIVAR =======
+###########################
+
+I think I can use multivar BC to fill in missing data:
+
+First, do the normalization, kddm construction, and covariance matrix
+setup using na.rm=TRUE.
+
+Then set NA to 0 (for two-tailed) or mode(?) for one-tailed and
+proceed.  NA becomes a climatology guess, basically, and then gets
+adjusted based on what all the other vars are doing.
+
+Obviously, I should test this with synthetic data.
+
+
+#########################
+======= FOR LATER =======
+#########################
+
+Default qqplot() function in R uses approx() when vectors are not
+identical in size.  That's misleading for plot.distmap, I think.
+
+Create nearest-order-statistic function:
+	x = values, p = probabilities,
+       	n  = length(x)-1
+	xs=sort(x)
+	return(xs[1+round(p*n)])
+
+Create q-q plot function that uses nearest-order-statistic.
+default number of points equal to smaller of nx, ny
+option: multiple samples + jitter, to make a cloud?
+like plot.xy -- adds points, doesn't make entire plot
+
+Revise plot.distmap to use the new q-q plot function
+
+Allow the option of skipping the points (new qqplot)
+
+Default xlab = deparse(substitute(object$x)) ?
+
+#########################
+
+Residuals-vs-fit type plot of transfer function?  Deviation from
+identity line.
+
+#########################
+
+Real data instead of synthetic for distmap examples?
+
+
+
+
+################################################
+=== DOCUMENT SOMEWHERE ZERO-HANDLING PROCESS ===
+################################################
+
+set threshold using entire dataset before doing anything else*
+drop zeros when constructing distmap
+in predict, conserve zeros
+check for negatives between predict & denormalize
+is that everything?
+
+*rationale: we do thresholding to correct the wet/dry frequency.
+ Generally, climate models exhibit excess drizzle, and depending on
+ how the output was post-processed, you can have very very small or
+ even negative values that will throw off the precipitation frequency
+ and the distribution mapping.  Although the wet/dry frequency has
+ seasonality, the drizzle problem is more about representation than it
+ is about model dynamics, so the cutoff threshold should be pretty
+ constant in time.  Plus, in arid regions, the number of wet days can
+ be very low in certain seasons, making it difficult or impossible to
+ estimate a time-varying drizzle cutoff.  Therefore, the simplest and
+ most appropriate way to adjust the probability of precipitation to
+ compensate for the drizzle problem in model output is: (1) floor all
+ datasets at zero; (2) calculate the wet/dry fraction based on the
+ entire timeseries of observational data; (3) sort the model output
+ for the corresponding current period; (4) use the calculated wet-dry
+ fraction to find a threshold value in the model output that will
+ equalize the wet days in the model with observations (note: this only
+ works if there's an excess of wet days in the model; if there's an
+ excess of dry days, the threshold will be zero and a univariate bias
+ correction cannot correct the wet/dry fraction); (5) set all values
+ in all model runs (current and future) below the threshold to zero.
+
