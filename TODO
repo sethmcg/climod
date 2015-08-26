@@ -6,11 +6,11 @@ check()
 R CMD Rd2pdf .
 
 
-
 DOCCO:
 
 R/cslice.R
 R/slice.R 
+R/climwindow.R
 
 distmap -> kddm
 
@@ -20,15 +20,16 @@ for plot.cslice - 2 lists -> matrices (pad w/NA) for mplot
 existing mplot -> mxyplot?
 mplot for more general plot of 2 lists?
 
-## integrate cslice into bias-correct.R #-># done and checked!
-
 
 some more todo items in ./bias-correct.R comments
 
+## @seealso:  \code{\link{function}} 
+##            \code{\link[package]{function}}
 
-check docco - \link{} on @seealso?
 
-nc_ingest docco
+## integrate cslice into bias-correct.R ## done and checked
+
+## nc_ingest docco  ## done
 
 
 

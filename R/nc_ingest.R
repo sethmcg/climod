@@ -34,7 +34,7 @@
 ##' @return A list containing the variables in the netcdf file with
 ##' named dimensions and attributes as in the netcdf file.
 ##' 
-##' @seealso atsign
+##' @seealso \code{\link{atsign}}
 ##' 
 ##' @importFrom ncdf4 nc_open ncvar_get ncatt_get
 ##' 

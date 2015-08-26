@@ -59,7 +59,7 @@
 ##' mplot(lapply(denorm,density), type="l")
 ##' legend("topright",names(denorm),lwd=1,lty=seq(N),col=seq(N)) 
 ##'
-##' @seealso normalize
+##' @seealso \code{\link{normalize}}
 ##' 
 ##' @export
 

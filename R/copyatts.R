@@ -6,9 +6,9 @@
 ##'
 ##' @param from The variable to copy attributes from.
 ##'
-##' @param to The variabe who attribute are to be set.
+##' @param to The variable whose attribute are to be set.
 ##'
-##' @return A copy of \link{to} with the attributes of \code{from}.
+##' @return A copy of \code{to} with the attributes of \code{from}.
 ##'
 ##' @examples
 ##' x <- 3

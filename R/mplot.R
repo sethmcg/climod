@@ -18,7 +18,7 @@
 ##'
 ##' @param ... Arguments to \code{matplot}
 ##'
-##' @seealso matplot
+##' @seealso \code{\link[graphics]{matplot}}
 ##'
 ##' @examples
 ##'

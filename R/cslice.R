@@ -1,7 +1,7 @@
 ##' Climatological slicing of cyclic data
 ##'
-##' Creates an object that indexes
-##' climatological moving windows for cyclic data.  
+##' Creates an object that indexes climatological moving 
+##' windows for cyclic data.
 ##'
 ##' DETAILS GO HERE
 ##'
@@ -33,6 +33,8 @@
 ##' @return An object of class 'cslice' containing lists of indices
 ##' associated with moving windows across multiple years and a list of
 ##' the parameters specifying the object.
+##'
+##' @seealso \code{\link{slice}}
 ##' 
 ##' @export
 

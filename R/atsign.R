@@ -39,7 +39,7 @@
 ##' x@@mu_s <- mean(x)
 ##' x
 ##'
-##' @seealso copyatts
+##' @seealso \code{\link{copyatts}}
 ##' 
 ##' @name atsign
 
