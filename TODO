@@ -3,8 +3,27 @@ library(devtools)
 load_all()
 check()
 
-R CMD Rd2pdf .
+# Note: check() doesn't work on lappy b/c ncdf4 has non-standard install
 
+## Run from parent directory
+R CMD Rd2pdf climod
+
+
+# INTEGRATION TEST:
+
+R -f bias-correct.R
+cd tests
+
+foreach i (*nc)
+ncdump $i > foo
+ncdump check/$i > bar
+echo $i
+diff foo bar
+echo =================
+rm foo bar
+end
+
+##########################
 
 DOCCO:
 

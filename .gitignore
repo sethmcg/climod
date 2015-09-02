@@ -1,12 +1,11 @@
+.DS_store
 .Rproj.user
 .Rhistory
 .RData
 
+*.nc
 
 *~
 
 old
 
-test
-
-man

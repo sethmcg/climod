@@ -3,28 +3,26 @@ library(KernSmooth)
 library(devtools)
 load_all()
 
-#for(varname in c("prec","tmax","tmin")){
-#    for(model in c("gcm","rcm")){
-#
-#        print("#################")
-#        print(paste(varname, model))
+for(varname in c("prec","tmax","tmin")){
 
-varname <- "prec"
-model   <- "gcm"
+        print("#################")
+        print(paste(varname))
+
+#varname <- "prec"
 
 norm <- ifelse(varname == "prec", "power", "zscore")
 
-infile.o <- paste0("test/",varname,".",model,".obs.nc")
-infile.c <- paste0("test/",varname,".",model,".cur.nc")
-infile.f <- paste0("test/",varname,".",model,".mid.nc")
+infile.o <- paste0("tests/raw/",varname,".obs.nc")
+infile.c <- paste0("tests/raw/",varname,".cur.nc")
+infile.f <- paste0("tests/raw/",varname,".fut.nc")
 
 #>#path <- "../pampas/data/raw/daily/"
 #>#ocf <- c("obs","cur","fut","mid")
 #>#infile <- as.list(paste0(path, varname, ".", model, ".", ocf, ".nc"))
 #>#names(infile) <- ocf        
 
-outfile.c <- paste0("test/",varname,".",model,".cur.bc.nc")
-outfile.f <- paste0("test/",varname,".",model,".mid.bc.nc")
+outfile.c <- paste0("tests/",varname,".cur.bc.nc")
+outfile.f <- paste0("tests/",varname,".fut.bc.nc")
 
 file.copy(infile.c, outfile.c, overwrite=TRUE)
 file.copy(infile.f, outfile.f, overwrite=TRUE)
@@ -222,5 +220,4 @@ ncatt_put(fout.f,0,"bias_correction",bcnote)
 nc_close(fout.c)
 nc_close(fout.f)
 
-#    }
-#}
+}
