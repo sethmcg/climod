@@ -3,123 +3,184 @@ library(KernSmooth)
 library(devtools)
 load_all()
 
-for(varname in c("prec","tmax","tmin")){
+ocf <- c("obs","cur","fut")
 
-        print("#################")
-        print(paste(varname))
-
-#varname <- "prec"
+#for(varname in c("prec","tmax","tmin")){
+ varname <- "prec"
 
 norm <- ifelse(varname == "prec", "power", "zscore")
 
-infile.o <- paste0("tests/raw/",varname,".obs.nc")
-infile.c <- paste0("tests/raw/",varname,".cur.nc")
-infile.f <- paste0("tests/raw/",varname,".fut.nc")
+print("#################")
+print(paste(varname))
 
-#>#path <- "../pampas/data/raw/daily/"
-#>#ocf <- c("obs","cur","fut","mid")
-#>#infile <- as.list(paste0(path, varname, ".", model, ".", ocf, ".nc"))
-#>#names(infile) <- ocf        
 
-outfile.c <- paste0("tests/",varname,".cur.bc.nc")
-outfile.f <- paste0("tests/",varname,".fut.bc.nc")
+indir <- "tests/raw"
+infiles <- paste0(indir, "/", varname, ".", ocf, ".nc")
+names(infiles) <- ocf
 
-file.copy(infile.c, outfile.c, overwrite=TRUE)
-file.copy(infile.f, outfile.f, overwrite=TRUE)
-
-fin.o <- nc_open(infile.o)
-fin.c <- nc_open(infile.c)
-fin.f <- nc_open(infile.f)
-#>#fin <- lapply(infile, nc_open)
+#infile.o <- paste0("tests/raw/",varname,".obs.nc")
+#infile.c <- paste0("tests/raw/",varname,".cur.nc")
+#infile.f <- paste0("tests/raw/",varname,".fut.nc")
+#
+#fin.o <- nc_open(infile.o)
+#fin.c <- nc_open(infile.c)
+#fin.f <- nc_open(infile.f)
         
-fout.c <- nc_open(outfile.c, write=TRUE)
-fout.f <- nc_open(outfile.f, write=TRUE)
+
+nc <- lapply(infiles, nc_ingest)
 
 
 ## get netcdf data in friendly form
-nc.o <- nc_ingest(fin.o)
-nc.c <- nc_ingest(fin.c)
-nc.f <- nc_ingest(fin.f)
+#nc.o <- nc_ingest(fin.o)
+#nc.c <- nc_ingest(fin.c)
+#nc.f <- nc_ingest(fin.f)
 #>#nc <- lapply(fin, nc_ingest)
 
-        
-## set up arrays for storing results
-save.c <- array(dim=dim(nc.c[[varname]]))
-save.f <- array(dim=dim(nc.f[[varname]]))
+
+time <- lapply(nc,"[[","time")
+
+indata <- lapply(nc,"[[",varname)
+
+outdata <- lapply(indata,"+",NA)
+#
+#
+### set up arrays for storing results
+#save.c <- array(dim=dim(nc.c[[varname]]))
+#save.f <- array(dim=dim(nc.f[[varname]]))
+#
 
 
-## generate climatology moving window index arrays
-## 360 1-ish-day moving windows w/ 30-day outer pool
-cwin.o <- cslice(nc.o$time, outer=30, num=360)
-cwin.c <- cslice(nc.c$time, outer=30, num=360)
-cwin.f <- cslice(nc.f$time, outer=30, num=360)
+cwin <- lapply(time, cslice, outer=30, num=360)
 
+### generate climatology moving window index arrays
+### 360 1-ish-day moving windows w/ 30-day outer pool
+#cwin.o <- cslice(nc.o$time, outer=30, num=360)
+#cwin.c <- cslice(nc.c$time, outer=30, num=360)
+#cwin.f <- cslice(nc.f$time, outer=30, num=360)
+#
 
-#>#time <- lapply(nc, '[[', "time")
-#>#cwin <- lapply(time, climwindow, outer=30, num=360)
     
 ## iterate over space
-xname <- names(dimnames(nc.o[[varname]]))[1]
-yname <- names(dimnames(nc.o[[varname]]))[2]
+#xname <- names(dimnames(nc.o[[varname]]))[1]
+#yname <- names(dimnames(nc.o[[varname]]))[2]
 
-nx <- length(nc.o[[xname]])
-ny <- length(nc.o[[yname]])
-    
+#nx <- length(nc.o[[xname]])
+#ny <- length(nc.o[[yname]])
+
+### Assert all 3 datasets have same spatial dimensions and are ordered
+### lon, lat, time...
+
+nxy <- dim(indata$obs)[1:2]
+nx <- nxy[1]
+ny <- nxy[2]
+
+
+
 for(x in 1:nx){
     for(y in 1:ny){
 
         print(paste0("x:",x,", y:",y))
 
-        ## get data from nc object 
-        data.o <- nc.o[[varname]][x,y,]
-        data.c <- nc.c[[varname]][x,y,]
-        data.f <- nc.f[[varname]][x,y,]
-        #>#data <- lapply(nc,function(d){d[[varname]][x,y,]})
+        data <- lapply(indata, function(a){a[x,y,]})
+        
+#        
+#        ## get data from nc object 
+#        data.o <- nc.o[[varname]][x,y,]
+#        data.c <- nc.c[[varname]][x,y,]
+#        data.f <- nc.f[[varname]][x,y,]
 
-        ## fix up precip
+
+
+        ##  For stability, it's best to dedrizzle precip data here        
         if(varname == "prec"){
-            ## floor all datasets at zero
-            data.o <- pmax(data.o, 0)
-            data.c <- pmax(data.c, 0)
-            data.f <- pmax(data.f, 0)
-            #>#data <- lapply(data,pmax,0)
 
+            ## floor data at zero
+            data <- lapply(data, pmax, 0)
+
+            ### MOVE TO DEDRIZZLE FUNCTION
+            
             ## calculate wet/dry fraction
-            nt <- length(data.o)
-            pwet <- sum(data.o > 0) / nt
+            pwet <- sum(data$obs > 0) / length(data$obs)
 
             ## find threshold equalizing model wet/dry with obs
-            threshold <- sort(data.c)[(1-pwet)*nt]
+            threshold <- sort(data$cur)[(1-pwet)*length(data$cur)]
 
             ## set values below threshold to zero
-            data.c[data.c < threshold] <- 0
-            data.f[data.f < threshold] <- 0
+            data$cur[data$cur < threshold] <- 0
+            data$fut[data$fut < threshold] <- 0
 
-            ## set zeros to NA for carrying through calculations
-            if(any(is.na(c(data.c, data.f, data.o)))){
-                warning("Some values already NA when setting zero -> NA")
+            ### END DEDRIZZLE FUNCTION
+
+            ### MOVE TO UNZERO FUNCTION
+
+            if(any(is.na(unlist(data)))){
+                warning("Some values already NA")
             }
-            data.o[data.o == 0] <- NA
-            data.c[data.c == 0] <- NA
-            data.f[data.f == 0] <- NA
-        }
+            data <- lapply(data, function(a){a[a == 0] <- NA; a})
 
-        ## if all data for one input dataset is NA, result is NA
-        if(all(is.na(data.o)) || all(is.na(data.c)) || all(is.na(data.f))){
+            ### END UNZERO FUNCTION
+
+        }
+            
+#        ## fix up precip
+#        if(varname == "prec"){
+#            ## floor all datasets at zero
+#            data.o <- pmax(data.o, 0)
+#            data.c <- pmax(data.c, 0)
+#            data.f <- pmax(data.f, 0)
+#            #>#data <- lapply(data,pmax,0)
+#
+#            ## calculate wet/dry fraction
+#            nt <- length(data.o)
+#            pwet <- sum(data.o > 0) / nt
+#
+#            ## find threshold equalizing model wet/dry with obs
+#            threshold <- sort(data.c)[(1-pwet)*nt]
+#
+#            ## set values below threshold to zero
+#            data.c[data.c < threshold] <- 0
+#            data.f[data.f < threshold] <- 0
+#
+#            ## set zeros to NA for carrying through calculations
+#            if(any(is.na(c(data.c, data.f, data.o)))){
+#                warning("Some values already NA when setting zero -> NA")
+#            }
+#            data.o[data.o == 0] <- NA
+#            data.c[data.c == 0] <- NA
+#            data.f[data.f == 0] <- NA
+#        }
+
+        ## If all data for one input dataset is NA, result is NA.  No
+        ## warnings or errors are needed here; all NA is expected over
+        ## oceans, outside domain, etc.
+        if(any(sapply(data, function(a){all(is.na(a))}))){
             next
         }
         
-        ## window data using outer window
-        wind.o <- slice(data.o, cwin.o, outer=TRUE)
-        wind.c <- slice(data.c, cwin.c, outer=TRUE)
-        wind.f <- slice(data.f, cwin.f, outer=TRUE)
+#        if(all(is.na(data.o)) || all(is.na(data.c)) || all(is.na(data.f))){
+#            next
+#        }
+
+        
+#        ## window data using outer window
+        wind <- mapply(slice, data, cwin, MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE)
+        
+#        wind.o <- slice(data.o, cwin.o, outer=TRUE)
+#        wind.c <- slice(data.c, cwin.c, outer=TRUE)
+#        wind.f <- slice(data.f, cwin.f, outer=TRUE)
+
+
         
         
         ## normalize each window separately
-        nwd.o   <- lapply(wind.o, normalize, norm=norm)
-        nwd.c   <- lapply(wind.c, normalize, norm=norm)
-        nwd.f   <- lapply(wind.f, normalize, norm=norm)
+        nwd <- rapply(wind, normalize, norm=norm, how="replace")
+        
+#        nwd.o   <- lapply(wind.o, normalize, norm=norm)
+#        nwd.c   <- lapply(wind.c, normalize, norm=norm)
+#        nwd.f   <- lapply(wind.f, normalize, norm=norm)
 
+
+        HERE!
 
         ## construct distribution mappings
         dmaps <- mapply(distmap, nwd.c, nwd.o, SIMPLIFY=FALSE)
@@ -175,6 +236,25 @@ for(x in 1:nx){
     }
 }
     
+###################
+
+
+
+outdir <- "tests"
+outfiles <- paste0(outdir, "/", varname, ".", ocf, ".bc.nc")
+
+#outfile.c <- paste0("tests/",varname,".cur.bc.nc")
+#outfile.f <- paste0("tests/",varname,".fut.bc.nc")
+
+mapply(file.copy, infiles, outfiles, overwrite=TRUE, copy.mode=FALSE)
+
+#file.copy(infile.c, outfile.c, overwrite=TRUE, copy.mode=FALSE)
+#file.copy(infile.f, outfile.f, overwrite=TRUE, copy.mode=FALSE)
+
+###
+
+fout.c <- nc_open(outfile.c, write=TRUE)
+fout.f <- nc_open(outfile.f, write=TRUE)
 
 
 ## write to file --> nc_replace function
