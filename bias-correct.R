@@ -6,7 +6,7 @@ load_all()
 ocf <- c("obs","cur","fut")
 
 #for(varname in c("prec","tmax","tmin")){
- varname <- "prec"
+varname <- "prec"
 
 norm <- ifelse(varname == "prec", "power", "zscore")
 
@@ -168,8 +168,6 @@ for(x in 1:nx){
 #        wind.o <- slice(data.o, cwin.o, outer=TRUE)
 #        wind.c <- slice(data.c, cwin.c, outer=TRUE)
 #        wind.f <- slice(data.f, cwin.f, outer=TRUE)
-
-
         
         
         ## normalize each window separately
@@ -180,59 +178,71 @@ for(x in 1:nx){
 #        nwd.f   <- lapply(wind.f, normalize, norm=norm)
 
 
-        HERE!
-
         ## construct distribution mappings
-        dmaps <- mapply(distmap, nwd.c, nwd.o, SIMPLIFY=FALSE)
+        dmaps <- mapply(distmap, nwd$cur, nwd$obs, SIMPLIFY=FALSE)
+        
+#        dmaps <- mapply(distmap, nwd.c, nwd.o, SIMPLIFY=FALSE)
+
+        
+        ## get normalized inner window for bias correction
+        fixme <- mapply(subslice, nwd, cwin, SIMPLIFY=FALSE)
+
+#        fixme.c <- subslice(nwd$cur, cwin$cur)
+#        fixme.f <- subslice(nwd$fut, cwin$fut)
+
+        
+        ## bias-correct innner window
+        fixed <- lapply(fixme, function(x){mapply(predict, dmaps, x)})
+        
+#        fixed.c <- mapply(predict, dmaps, fixme.c)
+#        fixed.f <- mapply(predict, dmaps, fixme.f)
+
+
+HERE!
+        
+        ## copy atts from nwd to fixed
+        fixed.c <- mapply(copyatts, nwd$cur, fixed.c, SIMPLIFY=FALSE)
+        fixed.f <- mapply(copyatts, nwd$cur, fixed.f, SIMPLIFY=FALSE)
+
         
 
-        ## get normalized inner window for bias correction
-        fixme.c <- subslice(nwd.c, cwin.c)
-        fixme.f <- subslice(nwd.f, cwin.f)
-
-        ## bias-correct innner window
-        fixed.c <- mapply(predict, dmaps, fixme.c)
-        fixed.f <- mapply(predict, dmaps, fixme.f)
-
-
-        ## copy atts from nwd to fixed
-        fixed.c <- mapply(copyatts, nwd.c, fixed.c, SIMPLIFY=FALSE)
-        fixed.f <- mapply(copyatts, nwd.c, fixed.f, SIMPLIFY=FALSE)
-                
-
         if(varname == "prec"){
-          ## check & fix negative values
-          neg.c <- sum(unlist(fixed.c) < 0, na.rm=TRUE)
-          if(neg.c > 0){
-            warning(paste(neg.c,"negative values in current after bias correction"))
-            fixed.c <- lapply(fixed.c, pmax, 0)
-          }
-          neg.f <- sum(unlist(fixed.f) < 0, na.rm=TRUE)
-          if(neg.f > 0){
-            warning(paste(neg.f,"negative values in future after bias correction"))
-            fixed.f <- lapply(fixed.f, pmax, 0)
-          }
+
+            ## MOVE TO REZERO FUNCTION
+            
+            ## check & fix negative values
+            neg.c <- sum(unlist(fixed.c) < 0, na.rm=TRUE)
+            if(neg.c > 0){
+                warning(paste(neg.c,"negative values in current after bias correction"))
+                fixed.c <- lapply(fixed.c, pmax, 0)
+            }
+            neg.f <- sum(unlist(fixed.f) < 0, na.rm=TRUE)
+            if(neg.f > 0){
+                warning(paste(neg.f,"negative values in future after bias correction"))
+                fixed.f <- lapply(fixed.f, pmax, 0)
+            }
 
           
-          ## convert NA back to zero
-          fixed.c <- lapply(fixed.c, function(x){x[is.na(x)]<-0;return(x)})
-          fixed.f <- lapply(fixed.f, function(x){x[is.na(x)]<-0;return(x)})
-
+            ## convert NA back to zero
+            fixed.c <- lapply(fixed.c, function(x){x[is.na(x)]<-0;return(x)})
+            fixed.f <- lapply(fixed.f, function(x){x[is.na(x)]<-0;return(x)})
+            
+            ## END REZERO FUNCTION
           
         }
 
         ## denormalize bias-corrected data
-        bc.c <- mapply(denormalize, fixed.c, nwd.o)
-        bc.f <- mapply(denormalize, fixed.f, nwd.o, nwd.c)
+        bc.c <- mapply(denormalize, fixed.c, nwd$obs)
+        bc.f <- mapply(denormalize, fixed.f, nwd$obs, nwd$cur)
 
                 
         ## collate BC inner windows back into timeseries
-        result.c <- unslice(bc.c, cwin.c)
-        result.f <- unslice(bc.f, cwin.f)
+        result.c <- unslice(bc.c, cwin$cur)
+        result.f <- unslice(bc.f, cwin$fut)
 
         ## save results in array
-        save.c[x,y,] <- result.c
-        save.f[x,y,] <- result.f
+        outdata$cur[x,y,] <- result.c
+        outdata$fut[x,y,] <- result.f
     }
 }
     

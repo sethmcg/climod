@@ -12,8 +12,8 @@ R CMD Rd2pdf climod
 # INTEGRATION TEST:
 
 R -f bias-correct.R
-cd tests
 
+cd tests
 foreach i (*nc)
 ncdump $i > foo
 ncdump check/$i > bar
@@ -22,6 +22,7 @@ diff foo bar
 echo =================
 rm foo bar
 end
+cd ..
 
 ##########################
 
