@@ -3,10 +3,13 @@ library(KernSmooth)
 library(devtools)
 load_all()
 
+## width of moving window
+mwinwidth = 30
+
 ocf <- c("obs","cur","fut")
 
-#for(varname in c("prec","tmax","tmin")){
-varname <- "prec"
+for(varname in c("prec","tmax","tmin")){
+#varname <- "prec"
 
 norm <- ifelse(varname == "prec", "power", "zscore")
 
@@ -42,7 +45,7 @@ time <- lapply(nc,"[[","time")
 indata <- lapply(nc,"[[",varname)
 
 outdata <- lapply(indata,"+",NA)
-#
+
 #
 ### set up arrays for storing results
 #save.c <- array(dim=dim(nc.c[[varname]]))
@@ -50,7 +53,7 @@ outdata <- lapply(indata,"+",NA)
 #
 
 
-cwin <- lapply(time, cslice, outer=30, num=360)
+cwin <- lapply(time, cslice, outer=mwinwidth, num=360)
 
 ### generate climatology moving window index arrays
 ### 360 1-ish-day moving windows w/ 30-day outer pool
@@ -74,6 +77,9 @@ nxy <- dim(indata$obs)[1:2]
 nx <- nxy[1]
 ny <- nxy[2]
 
+
+#x = 2
+#y = 1
 
 
 for(x in 1:nx){
@@ -187,22 +193,29 @@ for(x in 1:nx){
         ## get normalized inner window for bias correction
         fixme <- mapply(subslice, nwd, cwin, SIMPLIFY=FALSE)
 
+        ## drop obs from fixme
+
+        fixme <- fixme[-(names(fixme)=="obs")]
+        
 #        fixme.c <- subslice(nwd$cur, cwin$cur)
 #        fixme.f <- subslice(nwd$fut, cwin$fut)
-
         
         ## bias-correct innner window
         fixed <- lapply(fixme, function(x){mapply(predict, dmaps, x)})
+
         
 #        fixed.c <- mapply(predict, dmaps, fixme.c)
 #        fixed.f <- mapply(predict, dmaps, fixme.f)
 
 
-HERE!
-        
         ## copy atts from nwd to fixed
-        fixed.c <- mapply(copyatts, nwd$cur, fixed.c, SIMPLIFY=FALSE)
-        fixed.f <- mapply(copyatts, nwd$cur, fixed.f, SIMPLIFY=FALSE)
+
+        fixed$cur <- mapply(copyatts, nwd$cur, fixed$cur, SIMPLIFY=FALSE)
+        fixed$fut <- mapply(copyatts, nwd$fut, fixed$fut, SIMPLIFY=FALSE)
+        
+#        fixed.c <- mapply(copyatts, nwd$cur, fixed.c, SIMPLIFY=FALSE)
+        ## whoops! nwd$cur here is an error; should be $fut
+#        fixed.f <- mapply(copyatts, nwd$cur, fixed.f, SIMPLIFY=FALSE)
 
         
 
@@ -210,39 +223,55 @@ HERE!
 
             ## MOVE TO REZERO FUNCTION
             
-            ## check & fix negative values
-            neg.c <- sum(unlist(fixed.c) < 0, na.rm=TRUE)
-            if(neg.c > 0){
-                warning(paste(neg.c,"negative values in current after bias correction"))
-                fixed.c <- lapply(fixed.c, pmax, 0)
-            }
-            neg.f <- sum(unlist(fixed.f) < 0, na.rm=TRUE)
-            if(neg.f > 0){
-                warning(paste(neg.f,"negative values in future after bias correction"))
-                fixed.f <- lapply(fixed.f, pmax, 0)
-            }
+            ## fixed values may be negative; set to zero.
+            ## (Don't warn; this is normal)
+            fixed <- rapply(fixed, function(x){pmax(x,0)}, how="replace")
+            
+#            neg.c <- sum(unlist(fixed.c) < 0, na.rm=TRUE)
+#            if(neg.c > 0){
+#                warning(paste(neg.c,"negative values in current after bias correction"))
+#                fixed.c <- lapply(fixed.c, pmax, 0)
+#            }
+#            neg.f <- sum(unlist(fixed.f) < 0, na.rm=TRUE)
+#            if(neg.f > 0){
+#                warning(paste(neg.f,"negative values in future after bias correction"))
+#                fixed.f <- lapply(fixed.f, pmax, 0)
+#            }
 
           
             ## convert NA back to zero
-            fixed.c <- lapply(fixed.c, function(x){x[is.na(x)]<-0;return(x)})
-            fixed.f <- lapply(fixed.f, function(x){x[is.na(x)]<-0;return(x)})
+            fixed <- rapply(fixed, function(x){x[is.na(x)]<-0;return(x)}, how="replace")
+            
+#            fixed.c <- lapply(fixed.c, function(x){x[is.na(x)]<-0;return(x)})
+#            fixed.f <- lapply(fixed.f, function(x){x[is.na(x)]<-0;return(x)})
             
             ## END REZERO FUNCTION
           
         }
 
         ## denormalize bias-corrected data
-        bc.c <- mapply(denormalize, fixed.c, nwd$obs)
-        bc.f <- mapply(denormalize, fixed.f, nwd$obs, nwd$cur)
+        bc <- list()
+        bc$obs <- subslice(wind$obs, cwin$obs)
+        bc$cur <- mapply(denormalize, fixed$cur, match=nwd$obs)
+        bc$fut <- mapply(denormalize, fixed$fut, match=nwd$obs, adjust=nwd$cur)
+        
+#        bc.c <- mapply(denormalize, fixed.c, nwd$obs)
+#        bc.f <- mapply(denormalize, fixed.f, nwd$obs, nwd$cur)
 
                 
         ## collate BC inner windows back into timeseries
-        result.c <- unslice(bc.c, cwin$cur)
-        result.f <- unslice(bc.f, cwin$fut)
+#        result.c <- unslice(bc.c, cwin$cur)
+#        result.f <- unslice(bc.f, cwin$fut)
 
+        result <- mapply(unslice, bc, cwin)
+        
+        
         ## save results in array
-        outdata$cur[x,y,] <- result.c
-        outdata$fut[x,y,] <- result.f
+        for(i in names(result)){
+            outdata[[i]][x,y,] <- result[[i]]
+        }
+#        outdata$cur[x,y,] <- result.c
+#        outdata$fut[x,y,] <- result.f
     }
 }
     
@@ -252,62 +281,83 @@ HERE!
 
 outdir <- "tests"
 outfiles <- paste0(outdir, "/", varname, ".", ocf, ".bc.nc")
+names(outfiles) <- ocf
 
 #outfile.c <- paste0("tests/",varname,".cur.bc.nc")
 #outfile.f <- paste0("tests/",varname,".fut.bc.nc")
 
-mapply(file.copy, infiles, outfiles, overwrite=TRUE, copy.mode=FALSE)
 
+for(i in c("cur","fut")){
+
+### BEGIN NC_REPLACE FUNCTION
+    
+
+    file.copy(infiles[i], outfiles[i], overwrite=TRUE, copy.mode=FALSE)
 #file.copy(infile.c, outfile.c, overwrite=TRUE, copy.mode=FALSE)
 #file.copy(infile.f, outfile.f, overwrite=TRUE, copy.mode=FALSE)
-
-###
-
-fout.c <- nc_open(outfile.c, write=TRUE)
-fout.f <- nc_open(outfile.f, write=TRUE)
-
-
-## write to file --> nc_replace function
-## also function for adding history notes
-
-ncvar_put(fout.c, varname, save.c)
-ncvar_put(fout.f, varname, save.f)
-
-ncatt_put(fout.c, varname, "bias_correction", "KDDM")
-history.c = ncatt_get(fout.c,0,"history")$value
-history.c = paste0(date(),
-    ": bias-corrected using R package 'climod'\n",
-    "    see bias_correction attribute for details\n",
-    history.c)
-ncatt_put(fout.c,0,"history",history.c)
-bcnote = paste(
-    "Bias-corrected using KDDM (kernel density distribution mapping)\n",
-    "calculated over a 30-day moving window across years\n",
-    "observed data from",infile.o,"\n",
-    "current data from",infile.c,"\n",
-    "future data from",infile.f)
-ncatt_put(fout.c,0,"bias_correction",bcnote)
-
     
-        
+    fout <- nc_open(outfiles[i], write=TRUE)
+#fout.c <- nc_open(outfile.c, write=TRUE)
+#fout.f <- nc_open(outfile.f, write=TRUE)
+    
+    ncvar_put(fout, varname, outdata[[i]])
+#ncvar_put(fout.c, varname, save.c)
+#ncvar_put(fout.f, varname, save.f)
 
-ncatt_put(fout.f, varname, "bias_correction", "KDDM")
-history.f = ncatt_get(fout.f,0,"history")$value
-history.f = paste0(date(),
-    ": bias-corrected using R package 'climod'\n",
-    "    see bias_correction attribute for details\n",
-    history.f)
-ncatt_put(fout.f,0,"history",history.f)
+    ncatt_put(fout, varname, "bias_correction", "KDDM")
+#ncatt_put(fout.c, varname, "bias_correction", "KDDM")
+#ncatt_put(fout.f, varname, "bias_correction", "KDDM")
+
+
+## BEGIN APPEND HISTORY FUNCTION
+
+    historyatt <- ncatt_get(fout,0,"history")$value
+#history.c = ncatt_get(fout.c,0,"history")$value
+#history.f = ncatt_get(fout.f,0,"history")$value
+
+    historyatt = paste0(date(),
+        ": bias-corrected using R package 'climod'\n",
+        "    see bias_correction attribute for details\n",
+        historyatt)   
+#history.c = paste0(date(),
+#    ": bias-corrected using R package 'climod'\n",
+#    "    see bias_correction attribute for details\n",
+#    history.c)
+#history.f = paste0(date(),
+#    ": bias-corrected using R package 'climod'\n",
+#    "    see bias_correction attribute for details\n",
+#    history.f)
+
+    ncatt_put(fout, 0, "history", historyatt)    
+#ncatt_put(fout.c,0,"history",history.c)
+#ncatt_put(fout.f,0,"history",history.f)
+
+## END APPEND HISTORY FUNCTION
+
+#bcnote = paste(
+#    "Bias-corrected using KDDM (kernel density distribution mapping)\n",
+#    "calculated over a 30-day moving window across years\n",
+#    "observed data from",infile.o,"\n",
+#    "current data from",infile.c,"\n",
+#    "future data from",infile.f)
 bcnote = paste(
     "Bias-corrected using kernel density distribution mapping\n",
-    "calculated over a 30-day moving window across years\n",
-    "observed data from",infile.o,"\n",
-    "current data from",infile.c,"\n",
-    "future data from",infile.f)
-ncatt_put(fout.f,0,"bias_correction",bcnote)
-    
+    "calculated over a", mwinwidth, "day moving window across years\n",
+    "observed data from",infiles["obs"],"\n",
+    "current data from",infiles["cur"],"\n",
+    "future data from",infiles["fut"])
 
-nc_close(fout.c)
-nc_close(fout.f)
+
+    ncatt_put(fout, 0, "bias_correction", bcnote)
+#ncatt_put(fout.c,0,"bias_correction",bcnote)
+#ncatt_put(fout.f,0,"bias_correction",bcnote)
+    
+    nc_close(fout)
+#nc_close(fout.c)
+#nc_close(fout.f)
+
+    ## END NC REPLACE FUNCTION
+}
+
 
 }
