@@ -6,7 +6,8 @@
 ##'
 ##' @param p The PDF to integrate, either as a vector of probabilities
 ##' or as a list with elements named 'x' and 'y'.  Probabilities (p or
-##' p$y) should be non-negative; negative values will be set to 0.
+##' p$y) should be non-negative; negative values will be silently set
+##' to 0.
 ##' 
 ##' @param x The x-coordinates of the PDF.  If p is an atomic vector
 ##' and x is not given, x is assumed to be 1:length(p).  Values of x
@@ -61,7 +62,6 @@ pdf2cdf <- function(p, x=NULL, normalize=TRUE, expand=FALSE){
               )
 
     if(any(y < 0)){
-        warning("pdf2cdf: negative probabilities set to zero")
         y[y < 0] <- 0
     }
     

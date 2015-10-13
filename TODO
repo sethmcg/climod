@@ -27,6 +27,18 @@ cd ..
 
 ##########################
 
+CODE:
+
+dedrizzle
+unzero / rezero
+nc_addhistory
+nc_scaffold [monkeypatch]
+[datarod - bias correct]
+[bc script]
+xyapply
+
+
+
 DOCCO:
 
 R/cslice.R
@@ -52,6 +64,10 @@ some more todo items in ./bias-correct.R comments
 
 ## nc_ingest docco  ## done
 
+
+FIXES:
+
+figure out what to do with denormalize when power is different
 
 
 ###########################

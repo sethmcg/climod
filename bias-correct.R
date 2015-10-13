@@ -56,7 +56,7 @@ for(varname in c("prec","tmax","tmin")){
     
             ## extract data for this gridcell
             data <- lapply(indata, function(a){a[x,y,]})
-            
+                        
     
             ##  For stability, it's best to dedrizzle precip data here        
             if(varname == "prec"){
@@ -79,7 +79,8 @@ for(varname in c("prec","tmax","tmin")){
                 ### END DEDRIZZLE FUNCTION
     
                 ### MOVE TO UNZERO FUNCTION
-    
+
+                ## Make this warning switchable (default off)
                 if(any(is.na(unlist(data)))){
                     warning("Some values already NA")
                 }
@@ -88,11 +89,16 @@ for(varname in c("prec","tmax","tmin")){
                 ### END UNZERO FUNCTION
     
             }
-    
-            ## If all data for one input dataset is NA, result is NA.  No
-            ## warnings or errors are needed here; all NA is expected over
-            ## oceans, outside domain, etc.
+
+            
+            ## If all data for one input dataset is NA, result is NA.
+            ## No warnings or errors are needed here; all NA is
+            ## expected over oceans, outside domain, etc.
+            
             if(any(sapply(data, function(a){all(is.na(a))}))){
+                for(i in names(result)){
+                    outdata[[i]][x,y,] <- NA
+                }                
                 next
             }
             
