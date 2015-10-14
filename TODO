@@ -1,3 +1,4 @@
+R
 library(KernSmooth)
 library(devtools)
 load_all()
@@ -34,9 +35,9 @@ unzero / rezero
 nc_addhistory
 nc_scaffold [monkeypatch]
 [datarod - bias correct]
-[bc script]
-xyapply
 
+xyapply
+[bc script]
 
 
 DOCCO:
@@ -45,29 +46,45 @@ R/cslice.R
 R/slice.R 
 R/climwindow.R
 
-distmap -> kddm
+dedrizzle (improve)
+
+
+NEW FEATURES:
 
 add plot, print methods for cslice
 for plot.cslice - 2 lists -> matrices (pad w/NA) for mplot
 
+pdf vs pdf plot
+	PDF A up
+	PDF B down
+	overlay A-B (= delta between identity and xfer f'n?)
+	rugs
+
 existing mplot -> mxyplot?
 mplot for more general plot of 2 lists?
 
-
-some more todo items in ./bias-correct.R comments
-
-## @seealso:  \code{\link{function}} 
-##            \code{\link[package]{function}}
+detrend [all normalization params]
+	exploit cyclic nature of data - param by year + fit
+	more than first-order?
 
 
-## integrate cslice into bias-correct.R ## done and checked
+OPEN ISSUES:
 
-## nc_ingest docco  ## done
+save theta, pwet values on dedrizzle?
+warn for too many NA values on dedrizzle?
 
+rename:  distmap -> kddm
 
-FIXES:
+namelist(obs,cur,fut) -> class bcdata
 
+? fit lambda instead of 0.25 for power norm?
 figure out what to do with denormalize when power is different
+
+avoid overfitting of xfer f'n:
+	splinefun -> smooth.spline? [need to guarantee monotonicity]
+	thin KDE inputs to splinefun?  
+ 
+
 
 
 ###########################

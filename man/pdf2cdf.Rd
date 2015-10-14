@@ -9,7 +9,8 @@ pdf2cdf(p, x = NULL, normalize = TRUE, expand = FALSE)
 \arguments{
 \item{p}{The PDF to integrate, either as a vector of probabilities
 or as a list with elements named 'x' and 'y'.  Probabilities (p or
-p$y) should be non-negative; negative values will be set to 0.}
+p$y) should be non-negative; negative values will be silently set
+to 0.}
 
 \item{x}{The x-coordinates of the PDF.  If p is an atomic vector
 and x is not given, x is assumed to be 1:length(p).  Values of x

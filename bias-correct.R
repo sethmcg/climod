@@ -60,24 +60,9 @@ for(varname in c("prec","tmax","tmin")){
     
             ##  For stability, it's best to dedrizzle precip data here        
             if(varname == "prec"){
-    
-                ## floor data at zero
-                data <- lapply(data, pmax, 0)
-    
-                ### MOVE TO DEDRIZZLE FUNCTION
+
+                data <- dedrizzle(data)
                 
-                ## calculate wet/dry fraction
-                pwet <- sum(data$obs > 0) / length(data$obs)
-    
-                ## find threshold equalizing model wet/dry with obs
-                threshold <- sort(data$cur)[(1-pwet)*length(data$cur)]
-    
-                ## set values below threshold to zero
-                data$cur[data$cur < threshold] <- 0
-                data$fut[data$fut < threshold] <- 0
-    
-                ### END DEDRIZZLE FUNCTION
-    
                 ### MOVE TO UNZERO FUNCTION
 
                 ## Make this warning switchable (default off)
