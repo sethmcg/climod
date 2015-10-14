@@ -57,24 +57,12 @@ for(varname in c("prec","tmax","tmin")){
             ## extract data for this gridcell
             data <- lapply(indata, function(a){a[x,y,]})
                         
-    
-            ##  For stability, it's best to dedrizzle precip data here        
             if(varname == "prec"){
-
+                ## Remove excess drizzle and set zero values to NA
+                ## For stability, it's best to dedrizzle all at once, before slicing
                 data <- dedrizzle(data)
-                
-                ### MOVE TO UNZERO FUNCTION
-
-                ## Make this warning switchable (default off)
-                if(any(is.na(unlist(data)))){
-                    warning("Some values already NA")
-                }
-                data <- lapply(data, function(a){a[a == 0] <- NA; a})
-    
-                ### END UNZERO FUNCTION
-    
+                data <- lapply(data, unzero)
             }
-
             
             ## If all data for one input dataset is NA, result is NA.
             ## No warnings or errors are needed here; all NA is
@@ -86,8 +74,7 @@ for(varname in c("prec","tmax","tmin")){
                 }                
                 next
             }
-            
-            
+                        
             ## window data using outer window
             wind <- mapply(slice, data, cwin, MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE)
             
@@ -100,27 +87,19 @@ for(varname in c("prec","tmax","tmin")){
             ## get normalized inner window for bias correction
             fixme <- mapply(subslice, nwd, cwin, SIMPLIFY=FALSE)
     
-            ## (drop obs from fixme)
+            ## drop obs data
             fixme <- fixme[-(names(fixme)=="obs")]
             
-            ## bias-correct innner window
+            ## bias-correct inner window
             fixed <- lapply(fixme, function(x){mapply(predict, dmaps, x)})
     
-            ## copy over normalization attributes onto fixed
+            ## copy over lost normalization attributes onto fixed
             fixed$cur <- mapply(copyatts, nwd$cur, fixed$cur, SIMPLIFY=FALSE)
             fixed$fut <- mapply(copyatts, nwd$fut, fixed$fut, SIMPLIFY=FALSE)
-    
+
+            ## rezero precipitation
             if(varname == "prec"){
-                ## MOVE TO REZERO FUNCTION
-                
-                ## fixed values may be negative; set to zero.
-                ## (Don't warn; this is normal)
-                fixed <- rapply(fixed, function(x){pmax(x,0)}, how="replace")
-              
-                ## convert NA back to zero
-                fixed <- rapply(fixed, function(x){x[is.na(x)]<-0;return(x)}, how="replace")
-    
-                ## END REZERO FUNCTION          
+                fixed <- rapply(fixed, rezero, how="replace")                 
             }
     
             ## denormalize bias-corrected data
@@ -129,10 +108,9 @@ for(varname in c("prec","tmax","tmin")){
             bc$cur <- mapply(denormalize, fixed$cur, match=nwd$obs)
             bc$fut <- mapply(denormalize, fixed$fut, match=nwd$obs, adjust=nwd$cur)
                     
-            ## collate BC inner windows back into timeseries
+            ## collate inner windows back into timeseries
             result <- mapply(unslice, bc, cwin)
-            
-            
+                        
             ## save results in array
             for(i in names(result)){
                 outdata[[i]][x,y,] <- result[[i]]

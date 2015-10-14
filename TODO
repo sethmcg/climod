@@ -30,8 +30,6 @@ cd ..
 
 CODE:
 
-dedrizzle
-unzero / rezero
 nc_addhistory
 nc_scaffold [monkeypatch]
 [datarod - bias correct]
@@ -42,9 +40,9 @@ xyapply
 
 DOCCO:
 
-R/cslice.R
-R/slice.R 
-R/climwindow.R
+cslice
+slice
+climwindow
 
 dedrizzle (improve)
 
