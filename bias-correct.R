@@ -138,22 +138,10 @@ for(varname in c("prec","tmax","tmin")){
         ncvar_put(fout, varname, outdata[[i]])
     
         ncatt_put(fout, varname, "bias_correction", "KDDM")
-    
-    
-        ## BEGIN APPEND HISTORY FUNCTION
-    
-        historyatt <- ncatt_get(fout,0,"history")$value
-    
-        historyatt = paste0(date(),
-            ": bias-corrected using R package 'climod'\n",
-            "    see bias_correction attribute for details\n",
-            historyatt)   
-    
-        ncatt_put(fout, 0, "history", historyatt)    
-    
-        ## END APPEND HISTORY FUNCTION
-    
-        
+
+        nc_history(fout, paste("bias-corrected using R package 'climod'\n",
+                               "    see bias_correction attribute for details"))
+            
         bcnote = paste(
             "Bias-corrected using kernel density distribution mapping\n",
             "calculated over a", mwinwidth, "day moving window across years\n",

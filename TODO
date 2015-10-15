@@ -1,4 +1,5 @@
 R
+library(ncdf4)
 library(KernSmooth)
 library(devtools)
 load_all()
@@ -30,10 +31,9 @@ cd ..
 
 CODE:
 
-nc_addhistory
-nc_scaffold [monkeypatch]
-[datarod - bias correct]
+[datarod oriented bias correct]
 
+? nc_scaffold [monkeypatch]
 xyapply
 [bc script]
 
@@ -48,6 +48,8 @@ dedrizzle (improve)
 
 
 NEW FEATURES:
+
+dependency on ncdf4?  Examples for nc_ functions?
 
 add plot, print methods for cslice
 for plot.cslice - 2 lists -> matrices (pad w/NA) for mplot
