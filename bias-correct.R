@@ -51,12 +51,12 @@ for(varname in c("prec","tmax","tmin")){
     
     for(x in 1:nx){
         for(y in 1:ny){
-    
+            
             print(paste0("x:",x,", y:",y))
-    
+            
             ## extract data for this gridcell
             data <- lapply(indata, function(a){a[x,y,]})
-                        
+            
             if(varname == "prec"){
                 ## Remove excess drizzle and set zero values to NA
                 ## For stability, it's best to dedrizzle all at once, before slicing
@@ -78,49 +78,31 @@ for(varname in c("prec","tmax","tmin")){
             ## window data using outer window
             wind <- mapply(slice, data, cwin, MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE)
             
-            ## normalize each window separately
-            nwd <- rapply(wind, normalize, norm=norm, how="replace")
-    
-            ## construct distribution mappings
-            dmaps <- mapply(distmap, nwd$cur, nwd$obs, SIMPLIFY=FALSE)
+            ## invert list nesting
+            datatobc <- renest(wind)
             
-            ## get normalized inner window for bias correction
-            fixme <- mapply(subslice, nwd, cwin, SIMPLIFY=FALSE)
-    
-            ## drop obs data
-            fixme <- fixme[-(names(fixme)=="obs")]
+            ## bias-correct each window
+            fixdata <- lapply(datatobc, biascorrect, norm)
             
-            ## bias-correct inner window
-            fixed <- lapply(fixme, function(x){mapply(predict, dmaps, x)})
-    
-            ## copy over lost normalization attributes onto fixed
-            fixed$cur <- mapply(copyatts, nwd$cur, fixed$cur, SIMPLIFY=FALSE)
-            fixed$fut <- mapply(copyatts, nwd$fut, fixed$fut, SIMPLIFY=FALSE)
-
-            ## rezero precipitation
-            if(varname == "prec"){
-                fixed <- rapply(fixed, rezero, how="replace")                 
-            }
-    
-            ## denormalize bias-corrected data
-            bc <- list()
-            bc$obs <- subslice(wind$obs, cwin$obs)
-            bc$cur <- mapply(denormalize, fixed$cur, match=nwd$obs)
-            bc$fut <- mapply(denormalize, fixed$fut, match=nwd$obs, adjust=nwd$cur)
-                    
+            ## re-invert the list
+            bc <- renest(fixdata)
+            
             ## collate inner windows back into timeseries
             result <- mapply(unslice, bc, cwin)
-                        
+            
+            ## rezero precipitation
+            if(varname == "prec"){
+                result <- rapply(result, rezero, how="replace")
+            }
+            
             ## save results in array
             for(i in names(result)){
                 outdata[[i]][x,y,] <- result[[i]]
             }
         }
     }
-        
+    
     ###################
-    
-    
     
     outdir <- "tests"
     outfiles <- paste0(outdir, "/", varname, ".", ocf, ".bc.nc")
@@ -128,17 +110,15 @@ for(varname in c("prec","tmax","tmin")){
     
     
     for(i in c("cur","fut")){
-    
-        ### BEGIN NC_REPLACE FUNCTION
         
         file.copy(infiles[i], outfiles[i], overwrite=TRUE, copy.mode=FALSE)
         
         fout <- nc_open(outfiles[i], write=TRUE)
         
         ncvar_put(fout, varname, outdata[[i]])
-    
+        
         ncatt_put(fout, varname, "bias_correction", "KDDM")
-
+        
         nc_history(fout, paste("bias-corrected using R package 'climod'\n",
                                "    see bias_correction attribute for details"))
             
@@ -148,12 +128,9 @@ for(varname in c("prec","tmax","tmin")){
             "observed data from",infiles["obs"],"\n",
             "current data from",infiles["cur"],"\n",
             "future data from",infiles["fut"])
-        
-    
+            
         ncatt_put(fout, 0, "bias_correction", bcnote)
         
         nc_close(fout)
-    
-        ## END NC REPLACE FUNCTION
-    }    
+    } 
 }

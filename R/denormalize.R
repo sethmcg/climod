@@ -2,7 +2,8 @@
 ##'
 ##' Reverses the transformation applied to a vector of values by the
 ##' function \code{normalize}, using the type and parameters of the
-##' transformation as recorded in the vector's attributes.
+##' transformation as recorded in the vector's attributes.  See
+##' \code{\link{normalize}} for details on the transformations.
 ##'
 ##' The ability to undo a normalization is useful in bias correction
 ##' of climate model output.  A bias correction will adjust the values
@@ -23,6 +24,9 @@
 ##' difference between the original current and future model outputs.
 ##' The \code{adjust} argument is used for this purpose.
 ##'
+##' The "power" transformation raises the data to an arbitrary power.
+##' When undoing this transformation, the data is first floored at
+##' zero to avoid problems with negative inputs.
 ##' 
 ##' @param x A normalized vector
 ##' 
@@ -127,6 +131,9 @@ denormalize <- function(x, match=NULL, adjust=NULL){
             out.scale <- x@scale
             out.power <- x@power
         }
+
+        ## floor before exponentiation to avoid NaN (or worse, if power is 1/even...)
+        x <- pmax(x,0)
         
         if (out.power == 0){
           result <- exp(x)

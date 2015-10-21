@@ -43,8 +43,9 @@ DOCCO:
 cslice
 slice
 climwindow
-
 dedrizzle (improve)
+biascorrect
+
 
 
 NEW FEATURES:
