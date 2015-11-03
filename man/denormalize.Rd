@@ -20,7 +20,8 @@ normalization.}
 \description{
 Reverses the transformation applied to a vector of values by the
 function \code{normalize}, using the type and parameters of the
-transformation as recorded in the vector's attributes.
+transformation as recorded in the vector's attributes.  See
+\code{\link{normalize}} for details on the transformations.
 }
 \details{
 The ability to undo a normalization is useful in bias correction
@@ -41,6 +42,10 @@ period model output, the normalization needs to be reversed so
 that the result matches the observations, adjusted by the
 difference between the original current and future model outputs.
 The \code{adjust} argument is used for this purpose.
+
+The "power" transformation raises the data to an arbitrary power.
+When undoing this transformation, the data is first floored at
+zero to avoid problems with negative inputs.
 }
 \examples{
 obs <- rgamma(10000, shape=5, scale=3)

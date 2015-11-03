@@ -15,7 +15,39 @@
 ##'
 ##' @examples
 ##'
+##' f <- list(a=list(x=1, y=2, z=3), b=list(x="one", y="two", z="three"))
+##' g <- list(x=list(a=1, b="one"), y=list(a=2, b="two"), z=list(a=3,b="three"))
 ##' 
+##' 
+##' print(str(f))
+##' print(str(g))          
+##' print(identical(g, renest(f)))
+##' 
+##' 
+##' ## Inner list elements may themselves be lists or other complex
+##' ## objects; they are left as-is.
+##' 
+##' i <- list(a=list(x=1, y=2, z=3),
+##'           b=list(x=identity, y=seq(2), z=lapply(f,length)))
+##' 
+##'           
+##' j <- list(x=list(a=1, b=identity),
+##'           y=list(a=2, b=seq(2)),
+##'           z=list(a=3, b=lapply(f,length)))
+##' 
+##' print(str(i))
+##' print(str(j))          
+##' print(identical(i, renest(j)))
+##' 
+##' 
+##' ## Names of inner lists after the first are ignored and discarded.
+##' 
+##' h <- list(a=list(x=1, y=2, z=3),
+##'           b=list(i="one", j="two", k="three"),
+##'           c=list(z=2, y=4, x=6))
+##' str(h)
+##' str(renest(h))
+##'
 ##' @export
 
 
@@ -27,67 +59,6 @@ renest <- function(lol) {
 }
 
 
-## Convert these into examples and tests.  (For examples, use more
-## meaningful names and values to make it clearer what's going on.)
-
-#f <- list(a=list(x=1, y=2, z=3), b=list(x="one", y="two", z="three"))
-#g <- list(x=list(a=1, b="one"), y=list(a=2, b="two"), z=list(a=3,b="three"))
-#
-#print(str(f))
-#print(str(g))          
-#print(identical(g, renest(f)))
-#
-#
-#f1 <- list(a=list(x=1, y=2, z=3),
-#          b=list(x=identity, y=seq(2), z=lapply(f,length)))
-#
-#          
-#g1 <- list(x=list(a=1, b=identity),
-#          y=list(a=2, b=seq(2)),
-#          z=list(a=3, b=lapply(f,length)))
-#        
-#h1 <- renest(f1)
-#
-#print(str(f1))
-#print(str(g1))          
-#print(identical(g1, renest(f1)))
-#
-#
-#
-#fextra <- list(a=list(x=1, y=2, z=3),
-#          b=list(x="one", y="two", z="three", d="dummy"))
-#str(fextra)
-#str(renest(fextra))
-#
-#fmissing <- list(a=list(x=1, y=2, z=3, e="extra"),
-#          b=list(x="one", y="two", z="three"))
-#str(fmissing)
-#str(renest(fmissing))
-#
-#
-#forder <- list(a=list(x=1, y=2, z=3),
-#          b=list(x="one", z="three", y="two"))
-#str(forder)
-#str(renest(forder))
-#
-#
-#fouter <- list(list(x=1, y=2, z=3),
-#          list(x="one", z="three", y="two"))
-#str(fouter)
-#str(renest(fouter))
-#
-#
-#finner <- list(a=list(1, 2, 3),
-#          b=list("one", "two", "three"))
-#str(finner)
-#str(renest(finner))
-#
-#
-#fboth <- list(list(1, 2, 3),
-#          list("one", "two", "three"))
-#str(fboth)
-#str(renest(fboth))
-#
 
 
 ### Copyright 2015 Univ. Corp for Atmos. Research
