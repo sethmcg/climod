@@ -5,7 +5,9 @@
 ##'
 ##' DETAILS GO HERE
 ##'
-##' Allows for irregularly spaced data and non-standard calendars
+##' Allows for irregularly spaced data and non-standard calendars.
+##' Doesn't do anything with start time, so if they differ from file
+##' to file, that could be weird.
 ##' 
 ##' The size and number of the inner and outer windows can be
 ##' specified using any two of the four parameters \code{num},
@@ -72,8 +74,6 @@ cslice <- function(time,
     
     names(cs$inner) <- names
     names(cs$outer) <- names
-
-    time <- (time - time[1])
 
     for(i in 1:num){
         cs$inner[[i]] <- which( (time - inner*(i-1)) %% year < inner)

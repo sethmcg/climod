@@ -20,7 +20,8 @@
 ##'
 ##' @param ... Arguments to the density estimation function.
 ##'
-##' @return A numeric skill score; 0 indicates perfect agreement.
+##' @return A numeric skill score; 1 indicates perfect agreement, 0 no
+##' agreement.
 ##'
 ##' @examples
 ##'
@@ -86,5 +87,8 @@ tailskill <- function(obs, mod, threshold = 0.95, ...){
 
     score <- sum(dpdf * weight)
 
+    ## Sets the value from 0 (no skill) to 1 (perfect)
+    score <- 1/(1+score)
+    
     return(score)    
 }

@@ -17,7 +17,8 @@ Default value: 0.95.}
 \item{...}{Arguments to the density estimation function.}
 }
 \value{
-A numeric skill score; 0 indicates perfect agreement.
+A numeric skill score; 1 indicates perfect agreement, 0 no
+agreement.
 }
 \description{
 Given two datasets (observations and model), this function
