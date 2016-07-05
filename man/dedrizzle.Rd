@@ -4,22 +4,34 @@
 \alias{dedrizzle}
 \title{Removes excess drizzle from model data.}
 \usage{
-dedrizzle(x)
+dedrizzle(x, att = FALSE)
 }
 \arguments{
-\item{x}{A list of vectors named "obs", "cur", and "fut".}
+\item{x}{A list of vectors named "obs", "cur", and "fut".  The
+vectors do not need to be the same length.}
+
+\item{att}{Logical: whether to set attributes "pwet" and
+"threshold" on the returned list to record the wet/dry ratio and
+threshold value, respectively.  (Defaults to FALSE.)}
 }
 \value{
-A list with obs, cur, and fut with drizzle removed.
+A list containing obs, cur, and fut with drizzle removed.
 }
 \description{
-Given three vectors of precipitation (current and future model
-data, plus observations), dedrizzle finds a threshold value that
-will equalize the wet/dry ratio in the model data to match the
-wet/dry ratio in the observations, and sets all model values below
-that threshold to zero.
+Climate models typically generate too much drizzle.  Given modeled
+and observational precipitation, \code{dedrizzle} finds a
+threshold value that will cause the wet/dry ratio in the model
+data to match the wet/dry ratio in the observations, then sets all
+model values below that threshold to zero.
 }
 \details{
+\code{dedrizzle} takes two vectors of model data, one for the
+current period and one for the future period.  It finds the
+threshold based on the current data, and floors data below the
+threshold for both current and future data.  If the observational
+data has more wet (non-zero) values than the model data, the
+threshold will be zero.
+
 Dedrizzle floors all its inputs at zero before calculation.  It
 ignores NA values when calculating the wet/dry equalization
 threshold.

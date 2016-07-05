@@ -45,8 +45,6 @@ DOCCO:
 
 cslice
 slice
-climwindow
-dedrizzle (improve)
 biascorrect
 
 
@@ -73,9 +71,6 @@ detrend [all normalization params]
 
 
 OPEN ISSUES:
-
-save theta, pwet values on dedrizzle?
-warn for too many NA values on dedrizzle?
 
 rename:  distmap -> kddm
 
