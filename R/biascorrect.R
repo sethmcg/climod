@@ -13,6 +13,8 @@
 ##' @param norm The type of normalization to use.  See
 ##' \code{\link{normalize}} for more details.
 ##'
+##' @param ... Arguments to pass to \code{\link{distmap}}.
+##' 
 ##' @return The return value of the function.
 ##'
 ##' @examples
@@ -22,13 +24,13 @@
 ##' 
 ##' @export
 
-biascorrect <- function(bcdata, norm="zscore"){
+biascorrect <- function(bcdata, norm="zscore", ...){
 
     ## normalize the three data components
     nbcd <- lapply(bcdata, normalize, norm)
 
     ## construct distribution mapping
-    dmap <- distmap(nbcd$cur, nbcd$obs)
+    dmap <- distmap(nbcd$cur, nbcd$obs, ...)
 
     ### don't subslice yet...
 

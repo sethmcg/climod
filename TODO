@@ -27,11 +27,14 @@ end
 cd ..
 
 
+Argh, some change has snuck in here without me noticing.  Must see if
+I can track it down...
+
 ##########################
 
 CODE:
 
-[datarod oriented bias correct]
+[datarod oriented bias correct -> shatter/meld?]
 
 ? nc_scaffold [monkeypatch]
 xyapply
