@@ -15,7 +15,7 @@
 ##' 
 ##' Dedrizzle floors all its inputs at zero before calculation.  It
 ##' ignores NA values when calculating the wet/dry equalization
-##' threshold.
+##' threshold.  The "fut" element of the input list is optional.
 ##'
 ##' @param x A list of vectors named "obs", "cur", and "fut".  The
 ##' vectors do not need to be the same length.
@@ -53,7 +53,9 @@ dedrizzle <- function(x, att=FALSE){
     
     ## set values at or below threshold to zero
     x$cur[x$cur <= threshold] <- 0
-    x$fut[x$fut <= threshold] <- 0
+    if(!is.null(x$fut)){
+      x$fut[x$fut <= threshold] <- 0
+    }
 
     if(att){
         x@pwet <- pwet        
@@ -62,26 +64,3 @@ dedrizzle <- function(x, att=FALSE){
     
     return(x)
 }
-
-## Unit test:
-## x <- c(rep(0,10), seq(10))  ## length 20, 50% dry
-## y <- c(rep(0,10), seq(20))  ## length 30, 33% dry
-## z <- c(rep(0,15), seq(45)   ## length 60, 25% dry
-
-## obs/cur/fut  theta   future
-## x / y / z => 5       1/3 dry
-## x / z / y => 15      5/6 dry
-## y / z / x => 5       3/4 dry
-## y / x / z => 0       1/4 dry
-## z / x / y => 0       1/3 dry
-## z / y / x => 0       1/2 dry
-
-## use att=TRUE in the unit tests.
-
-## Unit test: x <- c(x,rep(5,NA))
-
-## unit test: y[1:5] <- -2
-
-## Unit test: shuffle all the vectors first
-
-## Unit test: what happens when fut is NULL?

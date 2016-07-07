@@ -5,14 +5,15 @@ Authors@R: person("Seth", "McGinnis", , "mcginnis@ucar.edu", role = c("aut", "cr
 Description: Bias correction via kernel density distribution mapping (KDDM),
     multivariate bias correction via concurrent decorrelation, and miscellaneous
     utilities for working with regional climate model (RCM) output in netcdf format.
-Depends:
+Depends: 
     R (>= 3.1.1)
-Imports:
+Imports: 
     KernSmooth,
     scales,
     ncdf4
-Suggests:
-    nor1mix
+Suggests: 
+    nor1mix,
+    testthat
 License: GPL-3
 LazyData: true
 RoxygenNote: 5.0.1

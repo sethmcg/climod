@@ -13,6 +13,8 @@ R CMD Rd2pdf climod
 
 # INTEGRATION TEST:
 
+(Make into unit test - then it'll run automatically with check())
+
 R -f bias-correct.R
 
 cd tests
@@ -43,7 +45,6 @@ xyapply
 
 DOCCO:
 
-cslice
 slice
 biascorrect
 
@@ -84,6 +85,38 @@ avoid overfitting of xfer f'n:
 	thin KDE inputs to splinefun?  
  
 
+UNIT TESTS:
+
+[Use testthat, not RUnit!]
+
+Use @examples -- just turn them into executables 
+
+FIRST: 
+       Fast (no I/O, small arrays)
+       		focus tests on pieces that have algorithmic complexity
+       Independent (test X doesn't depend on test Y; no globals, etc.)
+       Repeatable (no random numbers - or at least set seed)
+       Self-Verifying (generates Pass/Fail)
+             	yeah, you can't really unit-test plotting
+		unit-test the logical bits instead
+       Timely (write tests when writing code)
+       	      	do unit tests when changing code
+	     	don't try to add tests to everything in the world
+
+is the test easier to understand than the code?
+
+
+test helpers: setup / teardown functions
+
+setup
+exercise
+verify
+teardown
+
+infrastructure code has right answers; science code often doesn't
+	break code into smaller pieces
+	test boundary conditions where it's easier to determine right answer
+	work through a couple cases by hand (synthetic data)
 
 
 ###########################
