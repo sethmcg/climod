@@ -88,7 +88,7 @@ for(varname in c("prec","tmax","tmin")){
             bc <- renest(fixdata)
             
             ## collate inner windows back into timeseries
-            result <- mapply(unslice, bc, cwin)
+            result <- mapply(unslice, bc, cwin, SIMPLIFY=FALSE)
             
             ## rezero precipitation
             if(varname == "prec"){
