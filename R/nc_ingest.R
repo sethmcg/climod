@@ -17,7 +17,7 @@
 ##' ordering, because that difference is caused by the difference in
 ##' how R and C order the most-rapidly-varying array indices, and
 ##' changing the ordering would be both time-consuming and
-##' inefficient.
+##' inefficient.  Degenerate dimensions are culled.
 ##'
 ##' There is currently no custom print method for the resulting object
 ##' of this function. For a view of the contents of a netcdf file
@@ -60,10 +60,14 @@ nc_ingest <- function(netcdf, globalatts=FALSE){
         if(nc$var[[v]]$ndims > 0){
       
             ## read variable
-            var <- ncvar_get(nc, v)
+            var <- ncvar_get(nc, v, collapse_degen=TRUE)
       
             ## name dimensions
             dnames <- sapply(nc$var[[v]]$dim, function(x){x$name})
+            ## cull degenerate dimensions
+            dlen <- sapply(nc$var[[v]]$dim, function(x){x$len})
+            dnames <- dnames[!(dlen == 1)]
+            
             ## dimnames will take list of named NULL elements
             ## this names the dimensions but not rows/cols
             dimnames(var) <- sapply(dnames, function(x){NULL})
