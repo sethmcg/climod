@@ -13,6 +13,12 @@
 ##' @param norm The type of normalization to use.  See
 ##' \code{\link{normalize}} for more details.
 ##'
+##' @param dmap Logical; if TRUE, returns the \code{\link{distmap}}
+##' object generated during bias correction as an element named "dmap"
+##' in the returned list.  N.B.: This option defaults to FALSE because
+##' the distmap object is significantly larger than the inputs and
+##' outputs of this function combined.
+##' 
 ##' @param ... Arguments to pass to \code{\link{distmap}}.
 ##' 
 ##' @return The return value of the function.
@@ -24,13 +30,13 @@
 ##' 
 ##' @export
 
-biascorrect <- function(bcdata, norm="zscore", ...){
+biascorrect <- function(bcdata, norm="zscore", dmap=FALSE, ...){
 
     ## normalize the three data components
     nbcd <- lapply(bcdata, normalize, norm)
 
     ## construct distribution mapping
-    dmap <- distmap(nbcd$cur, nbcd$obs, ...)
+    mapping <- distmap(nbcd$cur, nbcd$obs, ...)
 
     ### don't subslice yet...
 
@@ -38,7 +44,7 @@ biascorrect <- function(bcdata, norm="zscore", ...){
     fixme <- nbcd[-(names(nbcd)=="obs")]
 
     ## apply KDDM transfer function
-    fixed <- lapply(fixme, function(x){predict(dmap, x)})
+    fixed <- lapply(fixme, function(x){predict(mapping, x)})
 
 
     ### hey, normalization atts carry over now!
@@ -50,6 +56,10 @@ biascorrect <- function(bcdata, norm="zscore", ...){
     result$cur <- denormalize(fixed$cur, match=nbcd$obs)
     result$fut <- denormalize(fixed$fut, match=nbcd$obs, adjust=nbcd$cur)
 
+    if(dmap){
+        result$distmap <- mapping
+    }
+    
     copyatts(bcdata, result)
     return(result)
 }
