@@ -37,7 +37,7 @@ Dimensions are named but not reordered to match the native netcdf
 ordering, because that difference is caused by the difference in
 how R and C order the most-rapidly-varying array indices, and
 changing the ordering would be both time-consuming and
-inefficient.
+inefficient.  Degenerate dimensions are culled.
 
 There is currently no custom print method for the resulting object
 of this function. For a view of the contents of a netcdf file

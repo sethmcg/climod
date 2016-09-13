@@ -1,3 +1,13 @@
+utils::globalVariables(c("norm","from","to","scale","power","mean","sd"))
+## The overloaded use of @ involves non-standard evaluation that makes
+## devtools::check() (or rather, codetools::checkUsagePackage()) think
+## that the attribute names are undefined global variable.  Declaring
+## them to be globalVariables suppresses the NOTE that would otherwise
+## result.  (It actually only complains about "from","to", and
+## "power", because the others all correpond to functions that come
+## from base:: or have been imported elsewhere, but I list them all
+## here to make it clearer what's going on.)
+
 ##' Undo the normalization of a vector of values
 ##'
 ##' Reverses the transformation applied to a vector of values by the
@@ -64,6 +74,8 @@
 ##' legend("topright",names(denorm),lwd=1,lty=seq(N),col=seq(N)) 
 ##'
 ##' @seealso \code{\link{normalize}}
+##'
+##' @importFrom scales rescale
 ##' 
 ##' @export
 

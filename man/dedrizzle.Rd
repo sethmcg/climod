@@ -34,7 +34,7 @@ threshold will be zero.
 
 Dedrizzle floors all its inputs at zero before calculation.  It
 ignores NA values when calculating the wet/dry equalization
-threshold.
+threshold.  The "fut" element of the input list is optional.
 }
 \examples{
 obs <- c(rep(0,10), rep(1,10), rep(NA,3))

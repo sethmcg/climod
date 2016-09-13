@@ -90,6 +90,8 @@
 ##'
 ##' 
 ##' @importFrom scales rescale
+##' @importFrom graphics abline lines rug segments
+##' @importFrom stats qqplot
 ##'
 ##' @export
 

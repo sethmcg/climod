@@ -4,7 +4,7 @@
 \alias{biascorrect}
 \title{Bias correction of climate model output using KDDM.}
 \usage{
-biascorrect(bcdata, norm = "zscore", ...)
+biascorrect(bcdata, norm = "zscore", dmap = FALSE, ...)
 }
 \arguments{
 \item{bcdata}{The data to be bias-corrected.  A list with elements
@@ -12,6 +12,12 @@ named "obs", "cur", and "fut".}
 
 \item{norm}{The type of normalization to use.  See
 \code{\link{normalize}} for more details.}
+
+\item{dmap}{Logical; if TRUE, returns the \code{\link{distmap}}
+object generated during bias correction as an element named "dmap"
+in the returned list.  N.B.: This option defaults to FALSE because
+the distmap object is significantly larger than the inputs and
+outputs of this function combined.}
 
 \item{...}{Arguments to pass to \code{\link{distmap}}.}
 }

@@ -40,6 +40,8 @@
 ##' x
 ##'
 ##' @seealso \code{\link{copyatts}}
+##'
+##' @importFrom methods slot slot<-
 ##' 
 ##' @name atsign
 

@@ -81,6 +81,7 @@
 ##'
 ##' 
 ##' @importFrom KernSmooth bkde
+##' @importFrom stats splinefun ppoints
 ##'
 ##' @export
 

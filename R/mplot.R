@@ -28,6 +28,8 @@
 ##' d <- lapply(x, density)
 ##' mplot(d, type="l")
 ##'
+##' @importFrom graphics matplot
+##' 
 ##' @export
 
 

@@ -83,7 +83,8 @@
 ##' @seealso \code{\link{denormalize}}
 ##'
 ##' @importFrom scales rescale
-##'
+##' @importFrom stats var sd
+##' 
 ##' @export
 
 
@@ -97,7 +98,7 @@ normalize <- function(x,
                       sd=stats::sd(x, na.rm=TRUE),
                       from=range(x, na.rm=TRUE),
                       to=c(0,1),
-                      scale=var(x, na.rm=TRUE)/mean(x, na.rm=TRUE),
+                      scale=stats::var(x, na.rm=TRUE)/base::mean(x, na.rm=TRUE),
                       power=0.25){
 
     norm.names <- c("range", "zscore", "power")

@@ -13,6 +13,8 @@
 ##'
 ##' @param comment The string to add to the history attribute.
 ##'
+##' @importFrom ncdf4 ncatt_get ncatt_put
+##' 
 ##' @export
 
 nc_history <- function(nc, comment){

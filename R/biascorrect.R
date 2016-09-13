@@ -27,6 +27,8 @@
 ##' x <- "example code"
 ##' y <- "more example code"
 ##' paste(x, y)
+##'
+##' @importFrom stats predict
 ##' 
 ##' @export
 

@@ -6,8 +6,8 @@
 \usage{
 normalize(x, norm = "zscore", mean = base::mean(x, na.rm = TRUE),
   sd = stats::sd(x, na.rm = TRUE), from = range(x, na.rm = TRUE),
-  to = c(0, 1), scale = var(x, na.rm = TRUE)/mean(x, na.rm = TRUE),
-  power = 0.25)
+  to = c(0, 1), scale = stats::var(x, na.rm = TRUE)/base::mean(x, na.rm =
+  TRUE), power = 0.25)
 }
 \arguments{
 \item{x}{A vector of values to be transformed.}

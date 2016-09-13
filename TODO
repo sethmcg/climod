@@ -5,9 +5,14 @@ library(devtools)
 load_all()
 check()
 
+## To generate / update man files
+## (rm NAMESPACE to regenerate it)
+library(roxygen2)
+roxygenize()
 
-## Run from parent directory
+## Run from parent directory to generate docco PDF
 R CMD Rd2pdf climod
+
 
 
 # INTEGRATION TEST:
@@ -35,9 +40,9 @@ I can track it down...
 
 CODE:
 
-fshatter / fmeld
-	split netcdf file into .Rdata rods/sheets for parallel processing
-	recompose in memory
+# fshatter / fmeld
+# 	split netcdf file into .Rdata rods/sheets for parallel processing
+# 	recompose in memory
 
 nc_scaffold [monkeypatch]
 
@@ -57,8 +62,6 @@ NEW FEATURES:
 
 dependency on ncdf4?  Examples for nc_ functions?
 
-add plot, print methods for cslice
-for plot.cslice - 2 lists -> matrices (pad w/NA) for mplot
 
 pdf vs pdf plot
 	PDF A up
@@ -66,12 +69,21 @@ pdf vs pdf plot
 	overlay A-B (= delta between identity and xfer f'n?)
 	rugs
 
+add plot, print methods for cslice
+for plot.cslice - 2 lists -> matrices (pad w/NA) for mplot
+
+mplot: make it work on lists of things with different lengths, and in
+the absence of x & y members.  What I want is something that acts like
+I called "plot" on each list element, but plots them all on a common
+field.  (And uses matplot to be sensible about multiple overlays.) 
+
 existing mplot -> mxyplot?
 mplot for more general plot of 2 lists?
 
 detrend [all normalization params]
 	exploit cyclic nature of data - param by year + fit
 	more than first-order?
+
 
 
 OPEN ISSUES:
