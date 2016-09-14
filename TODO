@@ -53,9 +53,15 @@ nc_scaffold [monkeypatch]
 
 DOCCO:
 
-slice
 biascorrect
 
+stub examples:
+     slice
+     nc_history
+     nc_ingest
+
+[netcdf files can't go in data/ folder of package; full examples that
+use netcdf data need to go in a vignette (q.v. below)]
 
 
 NEW FEATURES:
@@ -71,6 +77,12 @@ pdf vs pdf plot
 
 add plot, print methods for cslice
 for plot.cslice - 2 lists -> matrices (pad w/NA) for mplot
+# plot.cslice <- function(cs, inner.args=NULL, ...){
+#     itime = slice(cs$time, cs, outer=FALSE)
+#     otime = slice(cs$time, cs, outer=TRUE)
+#     mplot(otime, cs$outer, pch=pcho, ...)
+#     mapply(points, itime, cs$inner, inner.args)
+# }
 
 mplot: make it work on lists of things with different lengths, and in
 the absence of x & y members.  What I want is something that acts like
@@ -128,6 +140,70 @@ tailskill
 
 untested (trivial): namelist, yearlength
 untested (graphics): mplot, plot.distmap
+
+
+
+
+###########################
+====== FOR VIGNETTE =======
+###########################
+
+
+
+
+## Inner slice example: separate data into 12 "monthly" windows
+## Note: example data comes from southern hemisphere
+library(ncdf4)
+ 
+nc <- nc_ingest("tests/raw/tmax.cur.nc")
+
+tmax <- nc$tmax[1,1,]
+time <- nc$time
+
+monthly <- cslice(time, num=12, ratio=1, names=month.abb)
+
+mondata <- slice(tmax, monthly)
+montime <- slice(time, monthly)
+
+## Plot data colored by monthly window
+par(bg="gray")
+xr <- c(0,365*2)
+yr <- range(unlist(tmax))
+col <- topo.colors(12); names(col) <- month.abb
+plot(NA, xlim=xr, ylim=yr, xlab="day", ylab="tmax")
+for(i in month.abb){
+    points(montime[[i]],mondata[[i]],col=col[i])
+}
+legend("topright",names(col),col=col, pch=1, ncol=4, cex=0.75)
+
+
+
+## Outer slice example, continuing from above: compare normalizing
+## daily data based on 30-day moving climatological window vs
+## normalizing using monthly window
+
+daily <- cslice(time, inner=1, outer=30)
+daydata <- slice(tmax, daily, outer=TRUE)
+
+dev.new()
+par(mfrow=c(3,1))
+
+boxplot(mondata, pch='.', boxwex=1, outline=FALSE, main="Monthly window")
+boxplot(daydata, pch='.', boxwex=1, outline=FALSE, main="30-day moving window",
+        whisklty=0, boxlty=0, boxfill="gray", xlab="day of year")
+
+
+daynorm <- lapply(daydata, normalize)
+dayanom <- unslice(daynorm, daily)
+
+monnorm <- lapply(mondata, normalize)
+monanom <- unslice(monnorm, monthly)
+
+doy <- time %% 365.25
+
+plot(doy, dayanom-monanom, pch='.', main="Anomaly difference", ylab="")
+abline(v=seq(0,365.25,len=13),col="gray")
+
 
 
 

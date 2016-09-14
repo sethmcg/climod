@@ -33,7 +33,8 @@ reconstruct the timeseries from the windowed data.
 \details{
 \code{slice} uses a \code{\link{cslice}} object to separate a
 timeseries into climatological windows.  \code{unslice}
-reconstructs the timeseries from the (possibly modified) windowed
-data.  \code{subslice}
+reconstructs the timeseries from the (possibly modified) sliced
+data.  \code{subslice} takes data that has been sliced into outer
+windows and extracts the inner windows from each slice.
 }
 

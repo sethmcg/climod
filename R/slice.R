@@ -6,8 +6,9 @@
 ##'
 ##' \code{slice} uses a \code{\link{cslice}} object to separate a
 ##' timeseries into climatological windows.  \code{unslice}
-##' reconstructs the timeseries from the (possibly modified) windowed
-##' data.  \code{subslice} 
+##' reconstructs the timeseries from the (possibly modified) sliced
+##' data.  \code{subslice} takes data that has been sliced into outer
+##' windows and extracts the inner windows from each slice.
 ##'
 ##' @param x A vector of values to be sliced into windows.
 ##'
@@ -70,58 +71,3 @@ unslice <- function(s, how){
     return(result)
 }
 
-
-plot.cslice <- function(cs, inner.args=NULL, ...){
-#    itime = slice(cs$time, cs, outer=FALSE)
-#    otime = slice(cs$time, cs, outer=TRUE)
-#    mplot(otime, cs$outer, pch=pcho, ...)
-#    mapply(points, itime, cs$inner, inner.args)
-}
-
-
-# ## examples
-# library(ncdf4)
-#  
-# nc <- nc_open("test/tmax.gcm.cur.nc")
-# time <- ncvar_get(nc, "time")
-# time@calendar <- ncatt_get(nc, "time", "calendar")$value
-# tmax <- ncvar_get(nc,"tmax")[1,1,]
-# 
-# 
-# ## inner slice example: separate data into 12 "monthly" windows
-# 
-# months <- c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
-# monthly <- cslice(time, num=12, ratio=1, names=months)
-# 
-# mondata <- slice(tmax, monthly)
-# montime <- slice(time, monthly)
-#  
-# xr <- c(0,365*5)
-# yr <- range(unlist(tmax))
-# col <- topo.colors(12); names(col) <- months
-# plot(NA, xlim=xr, ylim=yr, xlab="time", ylab="tmax")
-# for(i in months){
-#     points(montime[[i]],mondata[[i]],col=col[i])
-# }
-# abline(h=sapply(mondata,mean),col=col)
-# 
-# 
-# ## outer slice example: normalizing daily data based on 30-day moving
-# ## window vs normalizing monthly
-# 
-# mnorm <- lapply(mondata, normalize)
-# monanom <- unslice(mnorm, monthly)
-# 
-# 
-# daily <- cslice(time, inner=1, outer=30)
-# ddata <- slice(tmax, daily, outer=TRUE)
-# 
-# ndata <- lapply(ddata, normalize)
-# dayanom <- unslice(ndata, daily, outer=TRUE)
-# 
-# doy <- rep(1:365,round(monthly$param$cycles))[1:length(tmax)]
-# plot(doy, monanom, xlim=c(1,30))
-# points(doy, dayanom, pch='.', col="red", cex=3)
-# 
-# ## Enh. Not the greatest example.  May do
-# 
