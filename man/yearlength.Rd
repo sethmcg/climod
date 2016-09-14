@@ -29,12 +29,14 @@ real-world value of 365.2425 days.  In netCDF files that comply
 with the CF Metadata Standard, this is recorded as the 'calendar'
 attribute of the time coordinate variable.  Valid calendars are:
 
-standard, gregorian: 365.2425 days
-proleptic_gregorian: 365.2425 days
-julian:              365.25 days
-noleap, 365_day:     365 days
-all_leap, 366_day:   366 days
-360_day:             360 days
+\tabular{ll}{
+standard, gregorian: \tab 365.2425 days \cr
+proleptic_gregorian: \tab 365.2425 days \cr
+julian:              \tab 365.25 days   \cr
+noleap, 365_day:     \tab 365 days      \cr
+all_leap, 366_day:   \tab 366 days      \cr
+360_day:             \tab 360 days
+}
 
 Note that although the real-world Gregorian calendar is a Julian
 calendar before October 15, 1582, accounting for this change would
