@@ -19,9 +19,9 @@ R CMD Rd2pdf climod
 
 (Consider making into unit test - then it'll run automatically with check())
 
-R -f bias-correct.R
-
 cd tests
+
+R -f full-bc-integration-test.R
 foreach i (*nc)
 ncdump $i > foo
 ncdump check/$i > bar
