@@ -176,26 +176,27 @@ The following example shows... HOW SLICE WORKS -- EDIT ME HERE
 
 
 ```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=7}
-data <- indata$cur[2,1,]
+x <- indata$cur[2,1,]
+t <- time$cur
 
 ## Slicing for 12 equally-sized monthly windows
-monthly <- cslice(time$cur, num=12, ratio=1, names=month.abb)
+monthly <- cslice(t, num=12, ratio=1, names=month.abb)
 
 ## Slice vectors into climatological windows
-mdata <- slice(data, monthly)
-mtime <- slice(time$cur, monthly)
+mx <- slice(x, monthly)
+mt <- slice(t, monthly)
 
 ## Plot data colored by window
 par(bg="gray")
 col <- topo.colors(12);
 names(col) <- month.abb
 
-xr <- c(0,365*2) + min(time$cur)
-yr <- range(data)
+xr <- c(0,365*2) + min(t)
+yr <- range(x)
 
-plot(NA, xlim=xr, ylim=yr, xlab=time$cur@units, ylab=varname)
+plot(NA, xlim=xr, ylim=yr, xlab=t@units, ylab=indata$cur@units, main=varname)
 for(i in month.abb){
-    points(mtime[[i]], mdata[[i]], col=col[i])
+    points(mt[[i]], mx[[i]], col=col[i])
 }
 legend("topright", names(col), col=col, pch=1, ncol=4, cex=0.75)
 ```
@@ -203,32 +204,30 @@ legend("topright", names(col), col=col, pch=1, ncol=4, cex=0.75)
 EDIT ME: So that's how slicing works.  This here is how we use slicing
 to do the moving window thing, and also demonstrate why it matters.
 
-```
+```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=7}
 ## Outer slice example, continuing from above: compare normalizing
 ## daily data based on 30-day moving climatological window vs
 ## normalizing using monthly window
 
-daily <- cslice(time, inner=1, outer=30)
-daydata <- slice(tmax, daily, outer=TRUE)
+daily <- cslice(t, inner=1, outer=30)
+dx <- slice(x, daily, outer=TRUE)
 
-dev.new()
 par(mfrow=c(3,1))
 
-boxplot(mondata, pch='.', boxwex=1, outline=FALSE, main="Monthly window")
-boxplot(daydata, pch='.', boxwex=1, outline=FALSE, main="30-day moving window",
+boxplot(mx, pch='.', boxwex=1, outline=FALSE, main="Monthly window")
+boxplot(dx, pch='.', boxwex=1, outline=FALSE, main="30-day moving window",
         whisklty=0, boxlty=0, boxfill="gray", xlab="day of year")
 
-
-daynorm <- lapply(daydata, normalize)
+daynorm <- lapply(dx, normalize)
 dayanom <- unslice(daynorm, daily)
 
-monnorm <- lapply(mondata, normalize)
+monnorm <- lapply(mx, normalize)
 monanom <- unslice(monnorm, monthly)
 
-doy <- time %% 365.25
+doy <- t %% 365
 
 plot(doy, dayanom-monanom, pch='.', main="Anomaly difference", ylab="")
-abline(v=seq(0,365.25,len=13),col="gray")
+abline(v=seq(0,365, len=13),col="gray")
 
 
 
