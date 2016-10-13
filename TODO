@@ -38,20 +38,28 @@ I can track it down...
 
 ##########################
 
+#####
+VIGNETTES:
+
+Minimal changes to code - just get it CRAN-worthy
+
+In the temp example, dive into the details of biascorrect() 
+In the prec example, abstract up higher
+
+Need a CORDEX-based example that does full-transient with trend
+
+
+#####
 CODE:
 
-# fshatter / fmeld
-# 	split netcdf file into .Rdata rods/sheets for parallel processing
-# 	recompose in memory
+copyatts:
+	NULL values in e.g. dimnames causes atts to be lost on []
+	update nc_ingest() to fill dimnames with string(coord vars)
+	       need att to track original type (float, double, etc.)
+	skip dimnames on copyatts() if dimensions don't match
 
-nc_scaffold [monkeypatch]
-
-? xyapply
-
-[bc script]
-
-
-DOCCO:
+#####
+DOCUMENTATION:
 
 biascorrect
 
@@ -64,9 +72,26 @@ stub examples:
 use netcdf data need to go in a vignette (q.v. below)]
 
 
+#####
 NEW FEATURES:
 
-dependency on ncdf4?  Examples for nc_ functions?
+For CORDEX, need to pull out the trend rather than the mean
+	fit trend with a 2nd-order curve
+	fit trend to cur+fut, not separately
+	match mean of cur to mean of obs
+	but don't do any other adjustments of trend
+
+OLD: detrend [all normalization params]
+	exploit cyclic nature of data - param by year + fit
+	more than first-order?
+
+
+Once nc_ingest is linking coord vars to data via (string) dimnames:
+	* overload [] with arg coordinate=TRUE to do coord range subset
+	* do better netcdf output
+	   	is internal nc object representation close enough to
+		netcdf data model that nc_scaffold (monkeypatch) is
+		unneeded? 
 
 
 pdf vs pdf plot
@@ -92,12 +117,9 @@ field.  (And uses matplot to be sensible about multiple overlays.)
 existing mplot -> mxyplot?
 mplot for more general plot of 2 lists?
 
-detrend [all normalization params]
-	exploit cyclic nature of data - param by year + fit
-	more than first-order?
+xyapply?
 
-
-
+#####
 OPEN ISSUES:
 
 rename:  distmap -> kddm
@@ -112,6 +134,7 @@ avoid overfitting of xfer f'n:
 	thin KDE inputs to splinefun?  
  
 
+#####
 UNIT TESTS:
 
 # dedrizzle
