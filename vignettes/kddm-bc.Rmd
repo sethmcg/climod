@@ -137,6 +137,7 @@ nc <- lapply(infiles, nc_ingest)
 ## extract variables of interest from the netcdf objects
 time <- lapply(nc,"[[","time")
 indata <- lapply(nc,"[[",varname)
+units <- indata$cur@units
 
 ### data structures for storage of results
 outdata <- lapply(indata,"+",NA)
@@ -172,8 +173,27 @@ bias-correcting the data month-by-month, we will use a sliding
 window, and correct each individual day based on the 30-day period
 surrounding it.
 
-The following example shows... HOW SLICE WORKS -- EDIT ME HERE
+The `cslice` function takes a vector of times and generates sets of
+indexes that divide the vector up into climatological windows, each of
+which contains points from a particular time of year.  The function
+returns an object that can be used to extract all the values falling
+within a window from any vector matching the time input.
 
+Note that the times in the input vector do not need to be uniformly
+spaced, nor do they need to have an integer number of timesteps per
+year.  The `cslice` function divides the annual cycle up into
+contiguous windows, finds all the times falling within each window,
+and returns the corresponding indexes.  The times do need to be stored
+in NetCDF-CF representation, as time elapsed since some starting
+point.  The `yearlength` function is used to derive the number of days
+per year from the `calendar` attribute of the time vector, if it is
+defined; otherwise it defaults to the standard real-world value of
+365.2425 days.
+
+The following figure shows how temperature data can be sliced into 12
+"monthly" climatological windows across multiple years.  ("Monthly" is
+in scare quotes because the windows are all identically 365/12 days
+long, and therefore don't strictly match the calendar months.)
 
 ```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=7}
 x <- indata$cur[2,1,]
@@ -194,29 +214,61 @@ names(col) <- month.abb
 xr <- c(0,365*2) + min(t)
 yr <- range(x)
 
-plot(NA, xlim=xr, ylim=yr, xlab=t@units, ylab=indata$cur@units, main=varname)
+plot(NA, xlim=xr, ylim=yr, xlab=t@units, ylab=units, main=varname)
 for(i in month.abb){
     points(mt[[i]], mx[[i]], col=col[i])
 }
 legend("topright", names(col), col=col, pch=1, ncol=4, cex=0.75)
 ```
 
-EDIT ME: So that's how slicing works.  This here is how we use slicing
-to do the moving window thing, and also demonstrate why it matters.
+The `cslice` function generates sets of indices for both inner and
+outer windows.  The smaller inner windows are contiguous, while the
+larger outer windows are allowed to overlap.  This is important for
+bias correction because you need a large window to get a good estimate
+of the distribution, but days near the beginning and end of a large
+window are not well-represented by the overall distribution,
+especially in the shoulder seasons (spring and fall).  If you use a
+small window, the distribution within the window is more stationary,
+but not well-sampled.  We can avoid this dilemma by using a large
+outer window to develop the transfer function, and then applying it
+only to the data in the small inner window, like using a moving
+average to calculate anomaly values instead of a monthly mean.  These
+relationships are shown in the following figure.
 
-```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=7}
+
+```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=13}
 ## Outer slice example, continuing from above: compare normalizing
 ## daily data based on 30-day moving climatological window vs
 ## normalizing using monthly window
 
+## day of year
+doy <- t %% yearlength(t)
+
 daily <- cslice(t, inner=1, outer=30)
-dx <- slice(x, daily, outer=TRUE)
 
-par(mfrow=c(3,1))
+dox <- slice(x, daily, outer=TRUE)
+dot <- slice(t, daily, outer=TRUE)
 
-boxplot(mx, pch='.', boxwex=1, outline=FALSE, main="Monthly window")
-boxplot(dx, pch='.', boxwex=1, outline=FALSE, main="30-day moving window",
-        whisklty=0, boxlty=0, boxfill="gray", xlab="day of year")
+dix <- slice(x, daily, outer=FALSE)
+dit <- slice(t, daily, outer=FALSE)
+
+
+par(mfrow=c(4,1))
+
+plot(doy, x, pch=".", 
+     xlab="day of year", ylab=units, main="30:1 windows at day 100")
+
+points(dot[[100]]%%365, dox[[100]], col="blue")
+points(dit[[100]]%%365, dix[[100]], col="red")
+legend("bottom", c("All data","Outer window","Inner window"),
+       pch=c(46,1,1), col=c("black","blue","red"))
+
+
+boxplot(mx,  pch='.', boxwex=1, outline=FALSE,
+	main="Monthly window", ylab=units)
+boxplot(dox, pch='.', boxwex=1, outline=FALSE, main="30-day moving window",
+        whisklty=0, boxlty=0, boxfill="gray",
+	xlab="day of year", ylab=units)
 
 daynorm <- lapply(dx, normalize)
 dayanom <- unslice(daynorm, daily)
@@ -224,12 +276,9 @@ dayanom <- unslice(daynorm, daily)
 monnorm <- lapply(mx, normalize)
 monanom <- unslice(monnorm, monthly)
 
-doy <- t %% 365
-
-plot(doy, dayanom-monanom, pch='.', main="Anomaly difference", ylab="")
+plot(doy, dayanom-monanom, pch=".",
+     main="Anomaly difference", ylab=units, xlab="day of year")
 abline(v=seq(0,365, len=13),col="gray")
-
-
 
 ```
 
