@@ -231,9 +231,9 @@ especially in the shoulder seasons (spring and fall).  If you use a
 small window, the distribution within the window is more stationary,
 but not well-sampled.  We can avoid this dilemma by using a large
 outer window to develop the transfer function, and then applying it
-only to the data in the small inner window, like using a moving
-average to calculate anomaly values instead of a monthly mean.  These
-relationships are shown in the following figure.
+only to the data in the small inner window. This is analogous to using
+a moving average to calculate anomaly values instead of a monthly
+mean.  These relationships are shown in the following figure.
 
 
 ```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=13}
@@ -265,19 +265,19 @@ legend("bottom", c("All data","Outer window","Inner window"),
 
 
 boxplot(mx,  pch='.', boxwex=1, outline=FALSE,
-	main="Monthly window", ylab=units)
-boxplot(dox, pch='.', boxwex=1, outline=FALSE, main="30-day moving window",
+	main="Monthly windows", ylab=units)
+boxplot(dox, pch='.', boxwex=1, outline=FALSE, main="30-day moving windows",
         whisklty=0, boxlty=0, boxfill="gray",
 	xlab="day of year", ylab=units)
 
-daynorm <- lapply(dx, normalize)
+daynorm <- lapply(dox, normalize)
 dayanom <- unslice(daynorm, daily)
 
 monnorm <- lapply(mx, normalize)
 monanom <- unslice(monnorm, monthly)
 
 plot(doy, dayanom-monanom, pch=".",
-     main="Anomaly difference", ylab=units, xlab="day of year")
+     main="Difference in anomalies", ylab=units, xlab="day of year")
 abline(v=seq(0,365, len=13),col="gray")
 
 ```
@@ -287,13 +287,12 @@ abline(v=seq(0,365, len=13),col="gray")
 Using a sliding window of a given length is also useful for
 harmonizing different calendars.  Observational data from the real
 world uses the familiar Gregorian calendar, which has 365 day in a
-year, except for leap years, which have 366 days.
-
-Climate models, on the other hand, typically use idealized calendars.
-Most of them use a 365-day, or 'noleap' calendar in which every year
-is exactly 365 days long, with no leap years ever.  However, there are
-also some climate models that use a 360-day calendar, composed of 12
-days each exactly 30 days long.
+year, except for leap years, which have 366 days.  Climate models, on
+the other hand, typically use idealized calendars.  Most of them use a
+365-day, or 'noleap' calendar in which every year is exactly 365 days
+long, with no leap years ever.  However, there are also some climate
+models that use a 360-day calendar, composed of 12 days each exactly
+30 days long.
 
 These differences are difficult to deal with if you are attempting to
 establish a one-to-one correspondence between the datasets.  By
@@ -305,27 +304,38 @@ this example, a roughly 30-day window sliced across 30 years contains
 around 900 days, which is more than enough to avoid problems.
 
 
-```
+### Application of Bias-Correction
+
+The following section shows the high-level flow of the bias-correction
+procedure.  At the outermost level, we loop over gridcells, correcting
+each one separately.  After extracting data for a given gridcell, we
+slice it into climatological windows.  This gives us a nested list
+with three outer elements (one for each dataset) each containing 360
+inner elements (one for each window).  We use the `renest` function to
+invert the nesting, so that we have 360 outer (window) elements that
+each contain 3 inner (dataset) elements.  We apply the `biascorrect`
+function (described in more detail later on) to each window, re-invert
+the list nesting, and then collate the inner windows of the corrected
+data back into a single timeseris for each dataset using the `unslice`
+function.  Finally, we save the results for this gridcell into the
+appropriate section of the storage arrays.
+
+
+```{r, highlight=TRUE}
 ## width of moving window
 mwinwidth = 30
 
 ### generate climatology moving window index arrays
-### 360 1-ish-day moving windows w/ 30-day outer pool
+### 360 ~1-day moving windows w/ 30-day outer pool
 cwin <- lapply(time, cslice, outer=mwinwidth, num=360)
     
-
-### Assert all 3 datasets have same spatial dimensions and are ordered
-### lon, lat, time...
-
+### Well-formatted NetCDF files have the time dimension varying most rapidly
 nxy <- dim(indata$obs)[1:2]
 nx <- nxy[1]
 ny <- nxy[2]
 
-
 for(x in 1:nx){
     for(y in 1:ny){
-        
-        print(paste0("x:",x,", y:",y))
         
         ## extract data for this gridcell
         data <- lapply(indata, function(a){a[x,y,]})
@@ -339,7 +349,27 @@ for(x in 1:nx){
         ## bias-correct each window
         fixdata <- lapply(datatobc, biascorrect, norm)
 
+        ## re-invert the list
+        bc <- renest(fixdata)
+        
+        ## collate inner windows back into timeseries
+        result <- mapply(unslice, bc, cwin, SIMPLIFY=FALSE)
+        
+        ## save results in array
+        for(i in names(result)){
+            outdata[[i]][x,y,] <- result[[i]]
+        }
+    }
+}
+```
 
+### Details of Bias Correction
+
+In this section, we bias-correct data from a single slice of a single
+gridcell to show the procedure in detail.
+
+
+```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=13}
 #        biascorrect <- function(bcdata, norm="zscore", dmap=FALSE, ...){
 #        
 #            ## normalize the three data components
@@ -370,25 +400,13 @@ for(x in 1:nx){
 #            return(result)
 #        }
 
+```
 
-        ## re-invert the list
-        bc <- renest(fixdata)
-        
-        ## collate inner windows back into timeseries
-        result <- mapply(unslice, bc, cwin, SIMPLIFY=FALSE)
-        
-        ## rezero precipitation
-        if(varname == "prec"){
-            result <- rapply(result, rezero, how="replace")
-        }
-        
-        ## save results in array
-        for(i in names(result)){
-            outdata[[i]][x,y,] <- result[[i]]
-        }
-    }
-}
-    
+### Saving Results to NetCDF
+
+This section shows how we save the bias-corrected results to a NetCDF file.
+
+```
     ###################
     
     outdir <- "tests"
