@@ -58,6 +58,11 @@ copyatts:
 	       need att to track original type (float, double, etc.)
 	skip dimnames on copyatts() if dimensions don't match
 
+	from ?'[': "Subsetting (except by an empty index) will drop
+     	     	   all attributes except 'names', 'dim' and
+     	     	   'dimnames'."
+
+
 #####
 DOCUMENTATION:
 
@@ -75,15 +80,17 @@ use netcdf data need to go in a vignette (q.v. below)]
 #####
 NEW FEATURES:
 
-For CORDEX, need to pull out the trend rather than the mean
-	fit trend with a 2nd-order curve
-	fit trend to cur+fut, not separately
-	match mean of cur to mean of obs
-	but don't do any other adjustments of trend
+> For CORDEX, need to pull out the trend rather than the mean
+> 	fit trend with a 2nd-order curve
+> 	fit trend to cur+fut, not separately
+> 	match mean of cur to mean of obs
+> 	but don't do any other adjustments of trend
+> 
+> OLD: detrend [all normalization params]
+> 	exploit cyclic nature of data - param by year + fit
+> 	more than first-order?
 
-OLD: detrend [all normalization params]
-	exploit cyclic nature of data - param by year + fit
-	more than first-order?
+Obsolete.  Replace this line of thinking with segmented normalization.
 
 
 Once nc_ingest is linking coord vars to data via (string) dimnames:
@@ -109,13 +116,12 @@ for plot.cslice - 2 lists -> matrices (pad w/NA) for mplot
 #     mapply(points, itime, cs$inner, inner.args)
 # }
 
-mplot: make it work on lists of things with different lengths, and in
-the absence of x & y members.  What I want is something that acts like
-I called "plot" on each list element, but plots them all on a common
-field.  (And uses matplot to be sensible about multiple overlays.) 
 
-existing mplot -> mxyplot?
-mplot for more general plot of 2 lists?
+mplot has been obsoleted by as.matrix.list(), which lets you convert
+lists to matrices to pass to matplot, optionally pulling a sub-element
+as you go.  Probably I should just remove mplot entirely; it shows up
+in the examples of normalize, denormalize, and tailskill.
+
 
 xyapply?
 
