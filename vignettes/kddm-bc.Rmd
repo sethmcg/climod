@@ -75,6 +75,7 @@ gridcells are roughly centered on the city of Boulder, shown in blue.
 
 
 ```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=4.75}
+library(climod)
 library(fields)
 
 ## read in topographic data
@@ -370,6 +371,19 @@ gridcell to show the procedure in detail.
 
 
 ```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=13}
+# 
+# ## 320 ~= winter solstice  (data starts in dec, not jan...)
+# 
+# bcdata <- datatobc[[320]]
+# bctime <- renest(mapply(slice, time, cwin, MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE))[[320]]
+# 
+# 
+# 
+# #par(mfrow=c(3,1))
+# #mapply(plot,bctime,bcdata)
+# 
+# 
+
 #        biascorrect <- function(bcdata, norm="zscore", dmap=FALSE, ...){
 #        
 #            ## normalize the three data components
@@ -377,8 +391,6 @@ gridcell to show the procedure in detail.
 #        
 #            ## construct distribution mapping
 #            mapping <- distmap(nbcd$cur, nbcd$obs, ...)
-#        
-#            ### don't subslice yet...
 #        
 #            ## drop obs data
 #            fixme <- nbcd[-(names(nbcd)=="obs")]
