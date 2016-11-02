@@ -48,6 +48,9 @@
 ##' but other units should work as long as they are consistent with
 ##' the value of \code{year}.
 ##'
+##' See the \link[=climod/doc/kddm-bc.html]{KDDM bias-correction
+##' vignette} for examples.
+##'
 ##' @param time A vector of times, encoded as time elapsed since some
 ##' start date.
 ##'
@@ -85,11 +88,14 @@ cslice <- function(time,
                    names = NULL
                    ){
 
-#    if(outer < inner){ stop("outer must be >= inner")}
-    ## check for:
-    ## inner > outer
-    ## num > year? well, no, could have subdaily.  Or diff units.
-    ## all finite, positive
+    for(a in c(num, ratio, inner, outer, year)){
+      if(a < 0 | !is.finite(a)){
+        stop("slicing parameters must be finite and positive")
+      }
+    }
+    if(outer < inner){ stop("outer must be >= inner")}
+    if(num < 1){ stop("num must be > 1")}
+    if(num != as.integer(num)){ warning("non-integer number of inner windows")}
     
     N = length(time)
     
@@ -114,53 +120,3 @@ cslice <- function(time,
     }    
     return(cs)
 }
-
-## examples for cslice probably just use plot/print methods
- 
-# 
-# ## examples
-# library(ncdf4)
-#  
-# nc <- nc_open("test/tmax.gcm.cur.nc")
-# time <- ncvar_get(nc, "time")
-# time@calendar <- ncatt_get(nc, "time", "calendar")$value
-# tmax <- ncvar_get(nc,"tmax")[1,1,]
-# 
-# 
-# ## inner slice example: separate data into 12 "monthly" windows
-# 
-# months <- c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
-# monthly <- cslice(time, num=12, ratio=1, names=months)
-# 
-# mondata <- slice(tmax, monthly)
-# montime <- slice(time, monthly)
-#  
-# xr <- c(0,365*5)
-# yr <- range(unlist(tmax))
-# col <- topo.colors(12); names(col) <- months
-# plot(NA, xlim=xr, ylim=yr, xlab="time", ylab="tmax")
-# for(i in months){
-#     points(montime[[i]],mondata[[i]],col=col[i])
-# }
-# abline(h=sapply(mondata,mean),col=col)
-# 
-# 
-# ## outer slice example: normalizing daily data based on 30-day moving
-# ## window vs normalizing monthly
-# 
-# mnorm <- lapply(mondata, normalize)
-# monanom <- unslice(mnorm, monthly)
-# 
-# 
-# daily <- cslice(time, inner=1, outer=30)
-# ddata <- slice(tmax, daily, outer=TRUE)
-# 
-# ndata <- lapply(ddata, normalize)
-# dayanom <- unslice(ndata, daily, outer=TRUE)
-# 
-# doy <- rep(1:365,round(monthly$param$cycles))[1:length(tmax)]
-# plot(doy, monanom, xlim=c(1,30))
-# points(doy, dayanom, pch='.', col="red", cex=3)
-# 
-# ## Enh. Not the greatest example.  May do
-# 

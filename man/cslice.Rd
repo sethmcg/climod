@@ -80,6 +80,9 @@ specified using any two of the four parameters \code{num},
 \code{inner} and \code{outer} are assumed to have units of days,
 but other units should work as long as they are consistent with
 the value of \code{year}.
+
+See the \link[=climod/doc/kddm-bc.html]{KDDM bias-correction
+vignette} for examples.
 }
 \seealso{
 \code{\link{slice}}
