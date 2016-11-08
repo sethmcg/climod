@@ -40,6 +40,16 @@
 ##' could result in some output values being based on many fewer
 ##' inputs than others; think carefully about window sizes and the
 ##' temporal structure of the data.
+##'
+##' If the indexes are split into contiguous segments by year using
+##' the \code{split} argument, any outer window segment that doesn't
+##' contain any inner window indexes will be discarded.  This happens
+##' when the first (last) outer window overlaps the start (end) of the
+##' dataset; discarding these segments ensures a one-to-one
+##' correspondence between inner and outer window segments and
+##' prevents some of the intermediate statistics created in KDDM
+##' bias-correction from being distorted by segments containing only a
+##' few points.
 ##' 
 ##' The size and number of the inner and outer windows can be
 ##' specified using any two of the four parameters \code{num},
@@ -54,7 +64,7 @@
 ##' @param time A vector of times, encoded as time elapsed since some
 ##' start date.
 ##'
-##' @param num The number of windows.
+##' @param num The number of inner windows per year.
 ##'
 ##' @param ratio The length of the outer window as a multiple of the
 ##' length of the inner window.
@@ -67,6 +77,10 @@
 ##'
 ##' @param names (optional) A vector of names for the windows (e.g.,
 ##' names of months).
+##' 
+##' @param split Logical: whether to split the indexes for each window
+##' into contiguous segments (i.e., grouped by year).  Defaults to
+##' TRUE.
 ##'
 ##' @return An object of class 'cslice' containing lists of indices
 ##' associated with moving windows across multiple years and a list of
@@ -85,7 +99,8 @@ cslice <- function(time,
                    inner = year / num,
                    outer = inner * ratio,
                    year  = yearlength(time),
-                   names = NULL
+                   names = NULL,
+                   split = TRUE
                    ){
 
     for(a in c(num, ratio, inner, outer, year)){
@@ -97,26 +112,47 @@ cslice <- function(time,
     if(num < 1){ stop("num must be > 1")}
     if(num != as.integer(num)){ warning("non-integer number of inner windows")}
     
-    N = length(time)
+    N <- length(time)
     
     span <- diff(range(time))
     cycles <- span / year
   
     cs <- list(
-        time   = time,
-        inner  = vector(mode="list", length=num),
-        outer  = vector(mode="list", length=num),
-        params = namelist(span, cycles, year, ratio, inner, outer)
+        time      = time,
+        inner     = vector(mode="list", length=num),
+        outer     = vector(mode="list", length=num),
+        params    = namelist(span, cycles, year, ratio, inner, outer, split)
         )
 
     class(cs) <- "cslice"
     
-    names(cs$inner) <- names
-    names(cs$outer) <- names
-
+    names(cs$inner)    <- names
+    names(cs$outer)    <- names
+    
     for(i in 1:num){
-        cs$inner[[i]] <- which( (time - inner*(i-1)) %% year < inner)
-        cs$outer[[i]] <- which( (time - inner*(i-1/2) + outer/2 ) %% year < outer)
+      innerind <- which( (time - inner*(i-1)) %% year < inner)
+      outerind <- which( (time - inner*(i-1/2) + outer/2 ) %% year < outer)
+      
+      if(!split) {
+        cs$inner[[i]] <- innerind
+        cs$outer[[i]] <- outerind
+      } else {
+        ## find segment boundaries
+        ibdy <- which(diff(innerind) > 1)
+        obdy <- which(diff(outerind) > 1)
+        
+        ## split vectors into segments
+        isegs <- mapply(function(a,b){innerind[a:b]}, SIMPLIFY=FALSE,
+                        c(0,ibdy)+1, c(ibdy,length(innerind)))
+        osegs <- mapply(function(a,b){outerind[a:b]}, SIMPLIFY=FALSE,
+                        c(0,obdy)+1, c(obdy,length(outerind)))
+          
+        ## discard outer segments not containing an inner segment
+        osegs <- osegs[sapply(osegs, function(x){any(innerind %in% x)})]
+        
+        cs$inner[[i]] <- isegs
+        cs$outer[[i]] <- osegs
+      }
     }    
-    return(cs)
+  return(cs)
 }

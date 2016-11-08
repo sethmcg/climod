@@ -39,6 +39,9 @@ slice <- function(x, how, outer=FALSE){
     } else {
         index <- how$inner
     }
+    if(how$param$split){
+      index <- unlist(index)
+    }
     lapply(index, function(i,y){return(y[i])}, x)
 }
 

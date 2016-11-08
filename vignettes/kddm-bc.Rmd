@@ -142,6 +142,7 @@ units <- indata$cur@units
 
 ### data structures for storage of results
 outdata <- lapply(indata,"+",NA)
+
 ```
 
 The function `nc_ingest` reads in the contents of a netcdf file and
@@ -201,7 +202,7 @@ x <- indata$cur[2,1,]
 t <- time$cur
 
 ## Slicing for 12 equally-sized monthly windows
-monthly <- cslice(t, num=12, ratio=1, names=month.abb)
+monthly <- cslice(t, num=12, ratio=1, names=month.abb, split=FALSE)
 
 ## Slice vectors into climatological windows
 mx <- slice(x, monthly)
@@ -220,6 +221,7 @@ for(i in month.abb){
     points(mt[[i]], mx[[i]], col=col[i])
 }
 legend("topright", names(col), col=col, pch=1, ncol=4, cex=0.75)
+
 ```
 
 The `cslice` function generates sets of indices for both inner and
@@ -245,7 +247,7 @@ mean.  These relationships are shown in the following figure.
 ## day of year
 doy <- t %% yearlength(t)
 
-daily <- cslice(t, inner=1, outer=30)
+daily <- cslice(t, inner=1, outer=30, split=FALSE)
 
 dox <- slice(x, daily, outer=TRUE)
 dot <- slice(t, daily, outer=TRUE)
@@ -362,6 +364,7 @@ for(x in 1:nx){
         }
     }
 }
+
 ```
 
 ### Details of Bias Correction
@@ -371,18 +374,30 @@ gridcell to show the procedure in detail.
 
 
 ```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=13}
-# 
-# ## 320 ~= winter solstice  (data starts in dec, not jan...)
-# 
-# bcdata <- datatobc[[320]]
-# bctime <- renest(mapply(slice, time, cwin, MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE))[[320]]
-# 
-# 
-# 
-# #par(mfrow=c(3,1))
-# #mapply(plot,bctime,bcdata)
-# 
-# 
+ 
+ ## 320 ~= winter solstice  (data starts in dec, not jan...)
+ 
+ bcdata <- datatobc[[320]]
+ bctime <- renest(mapply(slice, time, cwin, MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE))[[320]]
+ 
+
+## align epochs
+bctime$fut <- bctime$fut - 365*2
+bctime$cur <- bctime$cur - 365*2
+bctime$obs <- bctime$obs - 365*30 - 22
+
+## ?? Not sure what the 22 is about, but this is just hacking around,
+## so it doesn't matter
+
+ocfcol <- c(obs="black", cur="blue", fut="red")
+
+#par(mfrow=c(3,1))
+#matplot(as.matrix(bctime), as.matrix(bcdata), col=ocfcol, pch=1)
+
+## Okay.  This plot doesn't work.  Need boxplots for segments.  So
+## need segments
+
+ 
 
 #        biascorrect <- function(bcdata, norm="zscore", dmap=FALSE, ...){
 #        
