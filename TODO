@@ -38,7 +38,6 @@ I can track it down...
 
 ##########################
 
-#####
 VIGNETTES:
 
 Minimal changes to code - just get it CRAN-worthy
@@ -138,7 +137,8 @@ figure out what to do with denormalize when power is different
 avoid overfitting of xfer f'n:
 	splinefun -> smooth.spline? [need to guarantee monotonicity]
 	thin KDE inputs to splinefun?  
- 
+
+cslice args: ratio + outer gives error 
 
 #####
 UNIT TESTS:
