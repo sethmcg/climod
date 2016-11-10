@@ -349,19 +349,19 @@ for(x in 1:nx){
         ## invert list nesting
         datatobc <- renest(wind)
         
-        ## bias-correct each window
-        fixdata <- lapply(datatobc, biascorrect, norm)
-
-        ## re-invert the list
-        bc <- renest(fixdata)
-        
-        ## collate inner windows back into timeseries
-        result <- mapply(unslice, bc, cwin, SIMPLIFY=FALSE)
-        
-        ## save results in array
-        for(i in names(result)){
-            outdata[[i]][x,y,] <- result[[i]]
-        }
+#        ## bias-correct each window
+#        fixdata <- lapply(datatobc, biascorrect, norm)
+#
+#        ## re-invert the list
+#        bc <- renest(fixdata)
+#        
+#        ## collate inner windows back into timeseries
+#        result <- mapply(unslice, bc, cwin, SIMPLIFY=FALSE)
+#        
+#        ## save results in array
+#        for(i in names(result)){
+#            outdata[[i]][x,y,] <- result[[i]]
+#        }
     }
 }
 
@@ -370,64 +370,113 @@ for(x in 1:nx){
 ### Details of Bias Correction
 
 In this section, we bias-correct data from a single slice of a single
-gridcell to show the procedure in detail.
+gridcell to show the procedure in detail.  First, we create a custom
+plot function for the detailed data.
 
 
-```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=13}
- 
- ## 320 ~= winter solstice  (data starts in dec, not jan...)
- 
- bcdata <- datatobc[[320]]
- bctime <- renest(mapply(slice, time, cwin, MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE))[[320]]
- 
+```{r}
+library(KernSmooth)
 
-## align epochs
-bctime$fut <- bctime$fut - 365*2
-bctime$cur <- bctime$cur - 365*2
-bctime$obs <- bctime$obs - 365*30 - 22
+## A plotting function to show how the data changes
 
-## ?? Not sure what the 22 is about, but this is just hacking around,
-## so it doesn't matter
+bplot <- function(ocfdata){
+  ocf <- c(obs="black", cur="blue", fut="red")
 
-ocfcol <- c(obs="black", cur="blue", fut="red")
+  yr <- range(unlist(ocfdata))
+  mu <- sapply(ocfdata, function(x){mean(unlist(x))})
 
-#par(mfrow=c(3,1))
-#matplot(as.matrix(bctime), as.matrix(bcdata), col=ocfcol, pch=1)
+  par(mar=c(3,3,2,2))
+  layout(t(matrix(c(c(1,1,1,4),c(2,2,2,4),c(3,3,3,4)), 4, 3)))
+  for(i in names(ocf)){
+    boxplot(ocfdata[[i]], border=ocf[i], ylim=yr,
+            main=i, xlab="", ylab="")
+    abline(h=mu, col=ocf)
+  }
+  kde <- lapply(lapply(ocfdata, unlist), bkde)
+  mplot(kde, x="y", y="x", type="l", col=ocf, lty=1)
+  abline(h=mu, col=ocf)
+}
+```
 
-## Okay.  This plot doesn't work.  Need boxplots for segments.  So
-## need segments
+We will operate on data from the window that correponds roughly to the
+winter solstice.  (Note that this is at index 320 because the data
+starts in december, not january.... wait, what?)
 
- 
+# FIGURE OUT AND EXPLAIN 320!
 
-#        biascorrect <- function(bcdata, norm="zscore", dmap=FALSE, ...){
-#        
-#            ## normalize the three data components
-#            nbcd <- lapply(bcdata, normalize, norm)
-#        
-#            ## construct distribution mapping
-#            mapping <- distmap(nbcd$cur, nbcd$obs, ...)
-#        
-#            ## drop obs data
-#            fixme <- nbcd[-(names(nbcd)=="obs")]
-#        
-#            ## apply KDDM transfer function
-#            fixed <- lapply(fixme, function(x){predict(mapping, x)})
-#            
-#            ## denormalize bias-corrected data
-#            result <- list()
-#            result$obs <- bcdata$obs
-#            result$cur <- denormalize(fixed$cur, match=nbcd$obs)
-#            result$fut <- denormalize(fixed$fut, match=nbcd$obs, adjust=nbcd$cur)
-#        
-#            if(dmap){
-#                result$distmap <- mapping
-#            }
-#            
-#            copyatts(bcdata, result)
-#            return(result)
-#        }
+```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=7}
+bcdata <- datatobc[[320]]
+
+bplot(bcdata)
+```
+
+The first step in bias correction is to normalize the data.  We
+normalize each annual segment of the data separately in order to
+handle the transience of the climate change signal.
+
+```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=7}
+
+## normalize the three data components
+nbcd <- rapply(bcdata, normalize, how="replace", norm=norm)
+
+bplot(nbcd)
+```
+
+Now we construct a transfer function from the normalize data.  The
+transfer function needs a lot of data to get a good estimate of the
+distribution, so we pool the data across years.  Note that for
+temperature data, which uses a z-score normalization, the
+normalization/denormalization alone handles most of the bias
+correction.  However, looking at the lower tail of the transfer
+function shows that there are some excessive values on the low end
+that are reined in by reshaping the distribution using KDDM.
+
+```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=7}
+mapping <- distmap(unlist(nbcd$cur), unlist(nbcd$obs))
+
+plot(mapping)
+```
+
+Application of the transfer function adjusts the individual values so
+that the PDF of `cur` matches the PDF of `obs`.
+
+```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=7}
+## drop obs data 
+fixme <- nbcd[-(names(nbcd)=="obs")]
+## apply KDDM transfer function
+fixed <- rapply(fixme, function(x){predict(mapping, x)}, how="replace")
+
+fixed$obs <- nbcd$obs
+bplot(fixed)
+```
+
+Finally, we denormalize the data.  We want the mean and standard
+deviation of the current period to match that of the observed data, so
+we pass in the normalized observations.  Note that we want to do this
+matching based on the entire 30-year period shared between obs and
+cur; if we did it year-by-year, not only would the parameter estimates
+be less certain, we would be forcing the model output to match the
+interannual variation of the obs data, which would by unphysical and
+wrong.
+
+```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=7}
+## adjust denormalization using stats from entire 30-year obs/cur periods
+matchdata  <- normalize(unlist(bcdata$obs))
+adjustdata <- normalize(unlist(bcdata$cur))
+
+result <- list()
+result$obs <- bcdata$obs
+result$cur <- rapply(fixed$cur, denormalize, how="replace",
+	             match=matchdata)
+result$fut <- rapply(fixed$fut, denormalize, how="replace",
+                     match=matchdata, adjust=adjustdata)
+
+bplot(result)
 
 ```
+
+# EXPLAIN DIFFERENCE IN PDFS OF OBS & CUR.  IS THAT RIGHT?
+# DENORMALIZE ON CUR IS NOT RIGHT - WE LOSE ALL THE IAV
 
 ### Saving Results to NetCDF
 
