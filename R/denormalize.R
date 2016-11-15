@@ -86,7 +86,7 @@ utils::globalVariables(c("norm","from","to","scale","power","mean","sd"))
 ##' @export
 
 
-denormalize <- function(x, shift=0, scale=1, powscale=1){
+denormalize <- function(x, shift=0, scale=1, pscale=1){
 
     norm <- x@norm
     

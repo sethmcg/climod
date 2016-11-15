@@ -35,34 +35,54 @@
 biascorrect <- function(bcdata, norm="zscore", dmap=FALSE, ...){
 
     ## normalize the three data components
-    nbcd <- lapply(bcdata, normalize, norm)
+    nbcd <- rapply(bcdata, normalize, how="replace", norm=norm)
 
     ## construct distribution mapping
-    mapping <- distmap(nbcd$cur, nbcd$obs, ...)
-
-    ### don't subslice yet...
-
-    ## drop obs data
-    fixme <- nbcd[-(names(nbcd)=="obs")]
+    mapping <- distmap(unlist(nbcd$cur), unlist(nbcd$obs), ...)
 
     ## apply KDDM transfer function
-    fixed <- lapply(fixme, function(x){predict(mapping, x)})
+    ## note: could skip predict(obs), but need its norm atts for next step
+    fixed <- rapply(nbcd, function(x){predict(mapping, x)}, how="replace")
 
+    ## extract & average normalization attributes
+    adj <- rapply(fixed, attributes, how="replace")
+    adj <- lapply(adj, renest)
+    adj <- lapply(adj, function(x){lapply(x, function(y){unlist(y)})})
+    adj <- lapply(adj, function(x){x$norm<-NULL; x})
+    adj <- rapply(adj, mean, how="replace")
+    adj <- renest(adj)
 
-    ### hey, normalization atts carry over now!
-    
-    
+    ## calculate adjustments for denormalization
+    if(norm == "zscore"){
+        shift  <- adj$mean$obs - adj$mean$cur
+        scale  <- adj$sd$obs   / adj$sd$cur
+        pscale <- NA
+    }
+    if(norm == "power"){
+        shift  <- NA
+        scale  <-  adj$scale$obs   / adj$scale$cur
+        pscale <- adj$power$obs   / adj$power$cur
+    }
+    if(norm == "range"){
+        shift  <- adj$range$obs - adj$range$cur
+        scale  <- NA
+        pscale <- NA
+    }
+
     ## denormalize bias-corrected data
     result <- list()
     result$obs <- bcdata$obs
-    result$cur <- denormalize(fixed$cur, match=nbcd$obs)
-    result$fut <- denormalize(fixed$fut, match=nbcd$obs, adjust=nbcd$cur)
 
+    result$cur <- rapply(fixed$cur, denormalize, how="replace",
+                         shift=shift, scale=scale, pscale=pscale)
+    result$fut <- rapply(fixed$fut, denormalize, how="replace",
+                         shift=shift, scale=scale, pscale=pscale)
+    
     if(dmap){
         result$distmap <- mapping
     }
     
-    copyatts(bcdata, result)
+#    copyatts(bcdata, result)
     return(result)
 }
 

@@ -344,20 +344,21 @@ for(x in 1:nx){
         data <- lapply(indata, function(a){a[x,y,]})
 
         ## window data using outer window
-        wind <- mapply(slice, data, cwin, MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE)
+        wind <- mapply(slice, data, cwin,
+	               MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE)
         
         ## invert list nesting
         datatobc <- renest(wind)
         
-#        ## bias-correct each window
-#        fixdata <- lapply(datatobc, biascorrect, norm)
-#
-#        ## re-invert the list
-#        bc <- renest(fixdata)
-#        
-#        ## collate inner windows back into timeseries
-#        result <- mapply(unslice, bc, cwin, SIMPLIFY=FALSE)
-#        
+        ## bias-correct each window
+        fixdata <- lapply(datatobc, biascorrect, norm)
+
+        ## re-invert the list
+        bc <- renest(fixdata)
+        
+        ## collate inner windows back into timeseries
+        result <- mapply(unslice, bc, cwin, SIMPLIFY=FALSE)
+        
 #        ## save results in array
 #        for(i in names(result)){
 #            outdata[[i]][x,y,] <- result[[i]]
@@ -377,10 +378,12 @@ plot function for the detailed data.
 ```{r}
 library(KernSmooth)
 
+## color palette for bias-correction
+ocf <- c(obs="black", cur="blue", fut="red")
+
 ## A plotting function to show how the data changes
 
 bplot <- function(ocfdata){
-  ocf <- c(obs="black", cur="blue", fut="red")
 
   yr <- range(unlist(ocfdata))
   mu <- sapply(ocfdata, function(x){mean(unlist(x))})
@@ -515,6 +518,30 @@ result$fut <- rapply(fixed$fut, denormalize, how="replace", shift=dm, scale=ds)
 bplot(result)
 
 ```
+
+The following figure shows the bias-corrected results plotted against
+the original raw data.  The results are similar to what we would get
+if we had applied simple shift-and-scale adjustments to the mean and
+standard deviation (which is equivalent to using a linear transfer
+function created by modeling the data as purely gaussian), but with
+additional nuances, such as the stronger correction in the lower tail.
+
+```{r, highlight=TRUE, fig.show="hold", fig.width=7, fig.height=7}
+
+tocf <- adjustcolor(ocf, 0.3)
+names(tocf) <- names(ocf)
+rg <- range(unlist(bcdata), unlist(result))
+
+plot(unlist(bcdata$obs), unlist(result$obs), cex=0.5, col=tocf["obs"],
+     ylim=rg, xlim=rg, xlab="raw", ylab="bias-corrected")
+abline(0,1)
+points(unlist(bcdata$cur), unlist(result$cur), col=tocf["cur"], cex=0.75)
+points(unlist(bcdata$fut), unlist(result$fut), col=tocf["fut"], cex=0.75)
+
+legend("bottomright", col=ocf, c("observed","current","future"), pch=1)
+
+```
+
 
 <!-- ASIDE
 
