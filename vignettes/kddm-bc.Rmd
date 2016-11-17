@@ -359,10 +359,10 @@ for(x in 1:nx){
         ## collate inner windows back into timeseries
         result <- mapply(unslice, bc, cwin, SIMPLIFY=FALSE)
         
-#        ## save results in array
-#        for(i in names(result)){
-#            outdata[[i]][x,y,] <- result[[i]]
-#        }
+        ## save results in array
+        for(i in names(result)){
+            outdata[[i]][x,y,] <- result[[i]]
+        }
     }
 }
 

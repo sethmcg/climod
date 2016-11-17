@@ -4,18 +4,23 @@
 \alias{denormalize}
 \title{Undo the normalization of a vector of values}
 \usage{
-denormalize(x, match = NULL, adjust = NULL)
+denormalize(x, shift = 0, scale = 1, pscale = 1)
 }
 \arguments{
 \item{x}{A normalized vector}
 
-\item{match}{A normalized vector whose parameters should be used to
-reverse the normalization.}
+\item{shift}{An adjustment factor added to the denormalized data.
+Only used for "zscore" and "range" normalizations.  Adjusts the
+mean of zscore-normalized data.  For range-normalized data, a
+2-element vector can be supplied to adjust both ends of the range.}
 
-\item{adjust}{A normalized vector; the parameters of \code{match}
-are adjusted by the difference or ratio (as appropriate) of the
-paramters of \code{adjust} and \code{x} when reversing the
-normalization.}
+\item{scale}{A multiplicative adjustment factor applied to the
+denormalized data.  Only used for the "zscore" and "power"
+normalizations.  Adjusts the variance for zscore-normalized data,
+and the scale (variance / mean) for power-normalized data.}
+
+\item{pscale}{A multiplicative adjustment factor applied to the
+exponent when denormalizing power-scaled data.}
 }
 \description{
 Reverses the transformation applied to a vector of values by the
@@ -34,14 +39,12 @@ the various inputs are first normalized in some way.  This
 requires the normalization to be reversed after the bias
 correction has been applied.
 
-After bias-correcting current period model output, the
-normalization should be reversed in a way that matches the
-obervations, not the input model data.  The \code{match} argument
-is used for this purpose.  Similarly, after bias-correcting future
-period model output, the normalization needs to be reversed so
-that the result matches the observations, adjusted by the
-difference between the original current and future model outputs.
-The \code{adjust} argument is used for this purpose.
+When reversing the normalization, correction factors can be
+supplied to adjust the normalization parameters to compensate for
+bias.  The \code{shift} and \code{scale} arguments apply additive
+and multiplicative adjustments, respectively, to the data.  The
+\code{pscale} argument applies a multiplicative adjustment to the
+exponent used in power normalization.
 
 The "power" transformation raises the data to an arbitrary power.
 When undoing this transformation, the data is first floored at
@@ -57,16 +60,19 @@ data <- namelist(obs, cur, fut)
 ndata <- lapply(data, normalize, norm="power")
 
 dmap <- distmap(ndata$cur, ndata$obs)
-ndata$bcc <- predict(dmap)
-ndata$bcf <- predict(dmap,ndata$fut)
+ndata$bcc <- predict(dmap, ndata$cur)
+ndata$bcf <- predict(dmap, ndata$fut)
+
+par(mfrow=c(2,1))
 
 N <- length(ndata)
 mplot(lapply(ndata,density), type="l")
 legend("topleft",names(ndata),lwd=1,lty=seq(N),col=seq(N))
 
 denorm <- lapply(ndata[1:3], denormalize)
-denorm$bcc <- denormalize(ndata$bcc, match=ndata$obs)
-denorm$bcf <- denormalize(ndata$bcf, match=ndata$obs, adjust=ndata$cur)
+adjust <- ndata$obs@scale / ndata$cur@scale
+denorm$bcc <- denormalize(ndata$bcc, SCALE=adjust)
+denorm$bcf <- denormalize(ndata$bcf, SCALE=adjust)
 
 N <- length(denorm)
 mplot(lapply(denorm,density), type="l")
