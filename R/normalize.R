@@ -99,11 +99,12 @@ normalize <- function(x,
                       from=range(x, na.rm=TRUE),
                       to=c(0,1),
                       scale=stats::var(x, na.rm=TRUE)/base::mean(x, na.rm=TRUE),
+                      L2=1,
                       power=0.25){
 
-    norm.names <- c("range", "zscore", "power")
+    norm.names <- c("range", "zscore", "power", "boxcox", "log")
     n <- norm.names[pmatch(norm, norm.names)]
-    if(is.na(norm)){
+    if(is.na(n)){
       stop(paste("unknown normalization",norm))
     } else {
       norm <- n
@@ -123,6 +124,10 @@ normalize <- function(x,
         result@sd   <- sd
     }
 
+    if(norm == "log"){
+        result <- log(x)
+    }
+    
     if(norm=="power"){
         result <- x / scale
         if (power == 0){
@@ -131,6 +136,17 @@ normalize <- function(x,
           result <- result^power
         }
         result@scale <- scale
+        result@power <- power
+    }
+
+    if(norm=="boxcox"){
+        result <- x + L2
+        if (power == 0){
+          result <- log(result)
+        } else {
+          result <- result^power
+        }
+        result@L2    <- L2
         result@power <- power
     }
 

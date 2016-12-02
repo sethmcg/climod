@@ -53,20 +53,24 @@ biascorrect <- function(bcdata, norm="zscore", dmap=FALSE, ...){
     adj <- renest(adj)
 
     ## calculate adjustments for denormalization
+    shift <- NA
+    scale <- NA
+    pscale <- NA
+    
     if(norm == "zscore"){
         shift  <- adj$mean$obs - adj$mean$cur
         scale  <- adj$sd$obs   / adj$sd$cur
-        pscale <- NA
     }
     if(norm == "power"){
-        shift  <- NA
-        scale  <-  adj$scale$obs   / adj$scale$cur
-        pscale <- adj$power$obs   / adj$power$cur
+        scale  <- adj$scale$obs / adj$scale$cur
+        pscale <- adj$power$obs / adj$power$cur
     }
     if(norm == "range"){
         shift  <- adj$range$obs - adj$range$cur
-        scale  <- NA
-        pscale <- NA
+    }
+    if(norm == "boxcox"){
+        shift  <- adj$L2$obs - adj$L2$cur
+        pscale <- adj$power$obs / adj$power$cur
     }
 
     ## denormalize bias-corrected data

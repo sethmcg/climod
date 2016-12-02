@@ -90,7 +90,7 @@ denormalize <- function(x, shift=0, scale=1, pscale=1){
 
     norm <- x@norm
     
-    if(!norm %in% c("range", "zscore", "power")){
+    if(!norm %in% c("range", "zscore", "power", "boxcox", "log")){
         stop(paste("unknown normalization",norm))
     }
      
@@ -112,6 +112,10 @@ denormalize <- function(x, shift=0, scale=1, pscale=1){
         result@sd   <- NULL
     }
 
+    if(norm == "log"){
+        result <- exp(x)
+    }
+
     if(norm=="power"){
 
         out.scale <- x@scale * scale
@@ -129,6 +133,25 @@ denormalize <- function(x, shift=0, scale=1, pscale=1){
 	result@power <- NULL
 	result@scale <- NULL
     }
+
+    if(norm=="boxcox"){
+
+        out.L2    <- x@L2 + shift
+        out.power <- x@power * pscale
+                   
+        ## floor before exponentiation to avoid NaN (or worse, if 1/power is even...)
+        x <- pmax(x,0)
+        
+        if (out.power == 0){
+          result <- exp(x)
+        } else {
+          result <- x^(1/out.power)
+        }
+        result <- result - out.L2
+	result@power <- NULL
+	result@L2 <- NULL
+    }
+    
     
     result@norm <- NULL
     return(result)  

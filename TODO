@@ -53,6 +53,7 @@ Need a CORDEX-based example that does full-transient with trend
 CODE:
 
 copyatts:
+	(see fixme.copyatts.R in old/)
 	NULL values in e.g. dimnames causes atts to be lost on []
 	update nc_ingest() to fill dimnames with string(coord vars)
 	       need att to track original type (float, double, etc.)
@@ -61,6 +62,12 @@ copyatts:
 	from ?'[': "Subsetting (except by an empty index) will drop
      	     	   all attributes except 'names', 'dim' and
      	     	   'dimnames'."
+
+plot.distmap:
+	base qqplot uses approx() when arrays are different sizes
+	may be generating misleading points for precip data
+	consider thinning the arrays by hand
+	need to thin where data is densest
 
 
 #####
