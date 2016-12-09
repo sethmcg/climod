@@ -44,13 +44,12 @@ utils::globalVariables(c("norm","from","to","scale","power","mean","sd"))
 ##' 2-element vector can be supplied to adjust both ends of the range.
 ##'
 ##' @param scale A multiplicative adjustment factor applied to the
-##' denormalized data.  Only used for the "zscore" and "power"
-##' normalizations.  Adjusts the variance for zscore-normalized data,
-##' and the scale (variance / mean) for power-normalized data.
+##' denormalized data.  Only used for the "zscore" normalization.
+##' Adjusts the variance of zscore-normalized data.
 ##'
 ##' @param pscale A multiplicative adjustment factor applied to the
-##' exponent when denormalizing power-scaled data.
-##'
+##' exponent when denormalizing power-transformed data.
+##' 
 ##' @examples
 ##'
 ##' obs <- rgamma(10000, shape=5, scale=3)
@@ -90,7 +89,7 @@ denormalize <- function(x, shift=0, scale=1, pscale=1){
 
     norm <- x@norm
     
-    if(!norm %in% c("range", "zscore", "power", "boxcox", "log")){
+    if(!norm %in% c("range", "zscore", "power")){
         stop(paste("unknown normalization",norm))
     }
      
@@ -112,47 +111,24 @@ denormalize <- function(x, shift=0, scale=1, pscale=1){
         result@sd   <- NULL
     }
 
-    if(norm == "log"){
-        result <- exp(x)
-    }
-
     if(norm=="power"){
 
-        out.scale <- x@scale * scale
+        out.shift <- x@shift + shift
         out.power <- x@power * pscale
-                   
+
         ## floor before exponentiation to avoid NaN (or worse, if 1/power is even...)
         x <- pmax(x,0)
         
         if (out.power == 0){
           result <- exp(x)
         } else {
-          result <- x^(1/out.power)
+          result <- (out.power * x + 1)^(1/out.power)
         }
-        result <- result * out.scale
+        result <- result - out.shift
 	result@power <- NULL
-	result@scale <- NULL
+	result@shift <- NULL
     }
-
-    if(norm=="boxcox"){
-
-        out.L2    <- x@L2 + shift
-        out.power <- x@power * pscale
-                   
-        ## floor before exponentiation to avoid NaN (or worse, if 1/power is even...)
-        x <- pmax(x,0)
         
-        if (out.power == 0){
-          result <- exp(x)
-        } else {
-          result <- x^(1/out.power)
-        }
-        result <- result - out.L2
-	result@power <- NULL
-	result@L2 <- NULL
-    }
-    
-    
     result@norm <- NULL
     return(result)  
 }

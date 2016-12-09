@@ -19,9 +19,10 @@
 ##' (max-min).  The default is to transform the data to have min 0 and
 ##' max 1.
 ##'
-##' \code{"power"}: divide by the scale (variance/mean) and raise to a
-##' power.  This transformation will stabilize the variance for
-##' highly-skewed data.
+##' \code{"power"}: apply the power transformation, which raises the
+##' data to a power and scales it appropriately such that it's
+##' continuous down to a power of 0, which becomes the log.  This
+##' transformation will stabilize the variance for highly-skewed data.
 ##'
 ##' Each normalization by default uses parameters based on the sample
 ##' statistics of the input, but these parameters can be overridden.
@@ -44,14 +45,13 @@
 ##' @param to For range normalization, the output range.  Defaults to
 ##' c(0,1).
 ##'
-##' @param scale For power normalization, the scaling factor to divide
-##' by before the power transform.  Defaults to the sample variance
-##' divided by the sample mean, which is the scale parameter of the
-##' gamma and related distributions.
+##' @param shift An offset to the data for the power transform
+##' normalization.  Must be greater than minus the minimum value,
+##' otherwise NA values will result.  Defaults to zero.
 ##'
-##' @param power For power normalization, the exponent of the power
-##' transform. Defaults to 0.25, which is empirically known to be
-##' well-suited for working with precipitation.
+##' @param power For the power transform normalization, the exponent
+##' of the power transform. Defaults to zero, which is ideal for
+##' gamma-distributed data.
 ##'
 ##' @return Both \code{normalize} and \code{denormalize} return a
 ##' vector of values.  \code{normalize} adds attributes to the vector
@@ -98,11 +98,10 @@ normalize <- function(x,
                       sd=stats::sd(x, na.rm=TRUE),
                       from=range(x, na.rm=TRUE),
                       to=c(0,1),
-                      scale=stats::var(x, na.rm=TRUE)/base::mean(x, na.rm=TRUE),
-                      L2=1,
-                      power=0.25){
+                      power=0,
+                      shift=0){
 
-    norm.names <- c("range", "zscore", "power", "boxcox", "log")
+    norm.names <- c("range", "zscore", "power")
     n <- norm.names[pmatch(norm, norm.names)]
     if(is.na(n)){
       stop(paste("unknown normalization",norm))
@@ -123,33 +122,18 @@ normalize <- function(x,
         result@mean <- mean
         result@sd   <- sd
     }
-
-    if(norm == "log"){
-        result <- log(x)
-    }
     
     if(norm=="power"){
-        result <- x / scale
+        x <- x + shift     
         if (power == 0){
-          result <- log(result)
+            result <- log(x)
         } else {
-          result <- result^power
+            result <- (x^power - 1) / power
         }
-        result@scale <- scale
         result@power <- power
+        result@shift <- shift
     }
-
-    if(norm=="boxcox"){
-        result <- x + L2
-        if (power == 0){
-          result <- log(result)
-        } else {
-          result <- result^power
-        }
-        result@L2    <- L2
-        result@power <- power
-    }
-
+    
     result@norm <- norm
     return(result)
 }

@@ -35,8 +35,17 @@
 biascorrect <- function(bcdata, norm="zscore", dmap=FALSE, ...){
 
     ## normalize the three data components
-    nbcd <- rapply(bcdata, normalize, how="replace", norm=norm)
-
+    if(norm=="power"){
+        alpha <- lapply(lapply(bcdata, unlist),findalpha)  ## ! Need findalpha as function!
+        nbcd <- list()
+        nbcd$obs <- rapply(bcdata$obs, normalize, how="replace", norm=norm, shift=alpha$obs)    
+        nbcd$cur <- rapply(bcdata$cur, normalize, how="replace", norm=norm, shift=alpha$cur)
+        nbcd$fut <- rapply(bcdata$fut, normalize, how="replace", norm=norm, shift=alpha$cur)
+        # yes, shift=cur for fut
+    } else {    
+        nbcd <- rapply(bcdata, normalize, how="replace", norm=norm)
+    }
+    
     ## construct distribution mapping
     mapping <- distmap(unlist(nbcd$cur), unlist(nbcd$obs), ...)
 
@@ -56,21 +65,17 @@ biascorrect <- function(bcdata, norm="zscore", dmap=FALSE, ...){
     shift <- NA
     scale <- NA
     pscale <- NA
-    
+
     if(norm == "zscore"){
         shift  <- adj$mean$obs - adj$mean$cur
         scale  <- adj$sd$obs   / adj$sd$cur
     }
-    if(norm == "power"){
-        scale  <- adj$scale$obs / adj$scale$cur
-        pscale <- adj$power$obs / adj$power$cur
-    }
     if(norm == "range"){
         shift  <- adj$range$obs - adj$range$cur
     }
-    if(norm == "boxcox"){
-        shift  <- adj$L2$obs - adj$L2$cur
-        pscale <- adj$power$obs / adj$power$cur
+    if(norm == "power"){
+        shift <- adj$shift$obs - adj$shift$cur
+        pscale <- 1
     }
 
     ## denormalize bias-corrected data
