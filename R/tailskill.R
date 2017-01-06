@@ -50,6 +50,9 @@
 
 tailskill <- function(obs, mod, threshold = 0.95, ...){
 
+    obs <- na.omit(obs)
+    mod <- na.omit(mod)
+    
     if(threshold <= 0 | threshold >= 1){
         stop("Threshold must be between 0 and 1.")
     }

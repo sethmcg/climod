@@ -27,6 +27,8 @@
 
 
 pdfskill <- function(obs, mod, ...){
+    obs <- na.omit(obs)
+    mod <- na.omit(mod)
     range.x <- range(bkde(c(obs, mod), ...)$x)
     obspdf <- bkde(obs, range.x=range.x)
     modpdf <- bkde(mod, range.x=range.x)

@@ -8,7 +8,7 @@
 \usage{
 slice(x, how, outer=FALSE)
 
-subslice(s, how)
+subslice(s, how, split=how$params$split)
 
 unslice(s, how)
 }
@@ -24,6 +24,9 @@ windows, which cover the data completely without overlapping.}
 
 \item{s}{Sliced data -- a list of vectors, each corresponding to
 a different climatological window.}
+
+\item{split}{Whether to segment subsliced data by year.  Defaults
+to the \code{split} parameter of \code{how}.}
 }
 \description{
 \code{slice}, \code{subslice}, and \code{unslice} are used to
@@ -36,5 +39,10 @@ timeseries into climatological windows.  \code{unslice}
 reconstructs the timeseries from the (possibly modified) sliced
 data.  \code{subslice} takes data that has been sliced into outer
 windows and extracts the inner windows from each slice.
+
+Whether the sliced data is further segmented by year depends on
+whether the \code{cslice} object is segmented (i.e., called with
+\code{split=TRUE}).  The \code{subslice} function also accepts a
+\code{split} argument to override the default.
 }
 

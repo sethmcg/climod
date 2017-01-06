@@ -90,16 +90,20 @@
 distmap <- function(x, y, densfun=bkde, pgrid=ppoints(1000), na.rm=TRUE, ...){
 
     if(na.rm){
-        x <- x[!(is.na(x))]
-        y <- y[!(is.na(y))]
+        x <- x[is.finite(x)]
+        y <- y[is.finite(y)]
     }
-    
-    stopifnot(is.atomic(x), all(is.finite(x)),
-              is.atomic(y), all(is.finite(y)),            
-              is.atomic(pgrid), all(is.finite(pgrid)),
-              all(pgrid >= 0), all(pgrid <= 1),
-              all(diff(pgrid) > 0)
-              )
+
+    stopifnot(is.atomic(x))
+    stopifnot(all(is.finite(x)))
+    stopifnot(is.atomic(y))
+    stopifnot(all(is.finite(y)))
+    stopifnot(is.atomic(pgrid))
+    stopifnot(all(is.finite(pgrid)))
+    stopifnot(all(pgrid >= 0))
+    stopifnot(all(pgrid <= 1))
+    stopifnot(all(diff(pgrid) > 0))
+              
    
     xpdf <- densfun(x, ...)
     ypdf <- densfun(y, ...)
@@ -112,8 +116,7 @@ distmap <- function(x, y, densfun=bkde, pgrid=ppoints(1000), na.rm=TRUE, ...){
 
     transfer <- splinefun(xq, yq, method="monoH.FC")
 
-    result <- list(x=x, y=y, pgrid=pgrid, xpdf=xpdf, ypdf=ypdf,
-                   xq=xq, yq=yq, transfer=transfer)
+    result <- namelist(x, y, pgrid, xpdf, ypdf, xq, yq, transfer)
                    
     class(result) <- "distmap"
     return(result)

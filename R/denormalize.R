@@ -25,14 +25,12 @@ utils::globalVariables(c("norm","from","to","scale","power","mean","sd"))
 ##' requires the normalization to be reversed after the bias
 ##' correction has been applied.
 ##'
-##' After bias-correcting current period model output, the
-##' normalization should be reversed in a way that matches the
-##' obervations, not the input model data.  The \code{match} argument
-##' is used for this purpose.  Similarly, after bias-correcting future
-##' period model output, the normalization needs to be reversed so
-##' that the result matches the observations, adjusted by the
-##' difference between the original current and future model outputs.
-##' The \code{adjust} argument is used for this purpose.
+##' When reversing the normalization, correction factors can be
+##' supplied to adjust the normalization parameters to compensate for
+##' bias.  The \code{shift} and \code{scale} arguments apply additive
+##' and multiplicative adjustments, respectively, to the data.  The
+##' \code{pscale} argument applies a multiplicative adjustment to the
+##' exponent used in power normalization.
 ##'
 ##' The "power" transformation raises the data to an arbitrary power.
 ##' When undoing this transformation, the data is first floored at
@@ -40,35 +38,42 @@ utils::globalVariables(c("norm","from","to","scale","power","mean","sd"))
 ##' 
 ##' @param x A normalized vector
 ##' 
-##' @param match A normalized vector whose parameters should be used to
-##' reverse the normalization.
+##' @param shift An adjustment factor added to the denormalized data.
+##' Only used for "zscore" and "range" normalizations.  Adjusts the
+##' mean of zscore-normalized data.  For range-normalized data, a
+##' 2-element vector can be supplied to adjust both ends of the range.
 ##'
-##' @param adjust A normalized vector; the parameters of \code{match}
-##' are adjusted by the difference or ratio (as appropriate) of the
-##' paramters of \code{adjust} and \code{x} when reversing the
-##' normalization.
+##' @param scale A multiplicative adjustment factor applied to the
+##' denormalized data.  Only used for the "zscore" normalization.
+##' Adjusts the variance of zscore-normalized data.
 ##'
+##' @param pscale A multiplicative adjustment factor applied to the
+##' exponent when denormalizing power-transformed data.
+##' 
 ##' @examples
 ##'
 ##' obs <- rgamma(10000, shape=5, scale=3)
 ##' cur <- rgamma(10000, shape=6, scale=2)
 ##' fut <- rgamma(10000, shape=3, scale=4)
-##'
+##' 
 ##' data <- namelist(obs, cur, fut)
 ##' ndata <- lapply(data, normalize, norm="power")
-##'
+##' 
 ##' dmap <- distmap(ndata$cur, ndata$obs)
-##' ndata$bcc <- predict(dmap)
-##' ndata$bcf <- predict(dmap,ndata$fut)
-##'
+##' ndata$bcc <- predict(dmap, ndata$cur)
+##' ndata$bcf <- predict(dmap, ndata$fut)
+##' 
+##' par(mfrow=c(2,1))
+##' 
 ##' N <- length(ndata)
 ##' mplot(lapply(ndata,density), type="l")
 ##' legend("topleft",names(ndata),lwd=1,lty=seq(N),col=seq(N))
-##'
+##' 
 ##' denorm <- lapply(ndata[1:3], denormalize)
-##' denorm$bcc <- denormalize(ndata$bcc, match=ndata$obs)
-##' denorm$bcf <- denormalize(ndata$bcf, match=ndata$obs, adjust=ndata$cur)
-##'
+##' adjust <- ndata$obs@scale / ndata$cur@scale
+##' denorm$bcc <- denormalize(ndata$bcc, SCALE=adjust)
+##' denorm$bcf <- denormalize(ndata$bcf, SCALE=adjust)
+##' 
 ##' N <- length(denorm)
 ##' mplot(lapply(denorm,density), type="l")
 ##' legend("topright",names(denorm),lwd=1,lty=seq(N),col=seq(N)) 
@@ -80,83 +85,50 @@ utils::globalVariables(c("norm","from","to","scale","power","mean","sd"))
 ##' @export
 
 
-denormalize <- function(x, match=NULL, adjust=NULL){
+denormalize <- function(x, shift=0, scale=1, pscale=1){
 
-    if(is.null(match) & ! is.null(adjust)){
-        stop("argument 'match' required if 'adjust' is provided")
-    }
-
-    if(!is.null(match)){
-        norm <- match@norm
-    } else {
-        norm <- x@norm
-    }
-
+    norm <- x@norm
+    
     if(!norm %in% c("range", "zscore", "power")){
         stop(paste("unknown normalization",norm))
     }
      
     if(norm == "range"){
-        if(!is.null(match)){
-            out.range <- match@from
-            if(!is.null(adjust)){
-                out.range <- out.range + x@from - adjust@from
-            }
-        } else {
-            out.range <- x@from
-        }
+
+        out.range <- x@from + shift
         
         result <- rescale(x, from=x@to, to=out.range)
         result@range <- NULL
     }
 
     if(norm == "zscore"){
-        if(!is.null(match)){
-            out.mean <- match@mean
-            out.sd   <- match@sd
-            if(!is.null(adjust)){
-                out.mean <- out.mean + x@mean - adjust@mean
-                out.sd   <- out.sd   * x@sd   / adjust@sd
-            }
-        } else {
-            out.mean <- x@mean
-            out.sd   <- x@sd
-        }
-              
+
+        out.mean <- x@mean + shift
+        out.sd   <- x@sd   * scale
+           
         result <- x * out.sd + out.mean
         result@mean <- NULL
         result@sd   <- NULL
     }
 
     if(norm=="power"){
-        if(!is.null(match)){
-            out.scale <- match@scale
-            out.power <- match@power
-            if(!is.null(adjust)){
-                out.scale <- out.scale * x@scale / adjust@scale
-                out.power <- out.power * x@power / adjust@power
-                if(x@power != adjust@power){
-                    warning("Arguments x and adjust were normalized using norm=\"power\" with different exponents.")
-                }
-            }
-        } else {
-            out.scale <- x@scale
-            out.power <- x@power
-        }
 
-        ## floor before exponentiation to avoid NaN (or worse, if power is 1/even...)
+        out.shift <- x@shift + shift
+        out.power <- x@power * pscale
+
+        ## floor before exponentiation to avoid NaN (or worse, if 1/power is even...)
         x <- pmax(x,0)
         
         if (out.power == 0){
           result <- exp(x)
         } else {
-          result <- x^(1/out.power)
+          result <- (out.power * x + 1)^(1/out.power)
         }
-        result <- result * out.scale
+        result <- result - out.shift
 	result@power <- NULL
-	result@scale <- NULL
+	result@shift <- NULL
     }
-    
+        
     result@norm <- NULL
     return(result)  
 }

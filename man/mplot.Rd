@@ -4,17 +4,21 @@
 \alias{mplot}
 \title{Plot multiple data series}
 \usage{
-mplot(list, ...)
+mplot(list, x = "x", y = "y", ...)
 }
 \arguments{
 \item{list}{A list of objects, each with elements named 'x' and 'y'.}
 
+\item{x}{The name of the element to use for the X axis; defaults to "x".}
+
+\item{y}{The name of the element to use for the Y axis; defaults to "y".}
+
 \item{...}{Arguments to \code{matplot}}
 }
 \description{
-Given a list of objects, extracts the x and y elements from each
-object, joins them together in a matrix, and passes them to
-matplot.
+Given a list of objects, extracts an x-axis and a y-axis element
+from each object, joins them together in a matrix, and passes them
+to matplot.
 }
 \details{
 This is a convenience function used primarily for plotting
@@ -32,7 +36,10 @@ works fine on PDFs.
 mu <- rnorm(5, sd=5)
 sigma <- rgamma(5, shape=10, scale=0.25)
 x <- mapply(function(m,s){rnorm(10000,m,s)}, mu, sigma, SIMPLIFY=FALSE)
-d <- lapply(x, density)
+d1 <- lapply(x, density)
+d2 <- lapply(x, bkde)
+## Note that the length of x & y differ for bkde & density
+d <- c(d1, d2)
 mplot(d, type="l")
 
 }

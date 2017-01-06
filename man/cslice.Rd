@@ -6,13 +6,13 @@
 \usage{
 cslice(time, num = ceiling(year/inner), ratio = outer/inner,
   inner = year/num, outer = inner * ratio, year = yearlength(time),
-  names = NULL)
+  names = NULL, split = TRUE)
 }
 \arguments{
 \item{time}{A vector of times, encoded as time elapsed since some
 start date.}
 
-\item{num}{The number of windows.}
+\item{num}{The number of inner windows per year.}
 
 \item{ratio}{The length of the outer window as a multiple of the
 length of the inner window.}
@@ -25,6 +25,10 @@ length of the inner window.}
 
 \item{names}{(optional) A vector of names for the windows (e.g.,
 names of months).}
+
+\item{split}{Logical: whether to split the indexes for each window
+into contiguous segments (i.e., grouped by year).  Defaults to
+TRUE.}
 }
 \value{
 An object of class 'cslice' containing lists of indices
@@ -73,6 +77,16 @@ window that's shorter than the sampling frequency of the data
 could result in some output values being based on many fewer
 inputs than others; think carefully about window sizes and the
 temporal structure of the data.
+
+If the indexes are split into contiguous segments by year using
+the \code{split} argument, any outer window segment that doesn't
+contain any inner window indexes will be discarded.  This happens
+when the first (last) outer window overlaps the start (end) of the
+dataset; discarding these segments ensures a one-to-one
+correspondence between inner and outer window segments and
+prevents some of the intermediate statistics created in KDDM
+bias-correction from being distorted by segments containing only a
+few points.
 
 The size and number of the inner and outer windows can be
 specified using any two of the four parameters \code{num},
