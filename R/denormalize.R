@@ -115,13 +115,12 @@ denormalize <- function(x, shift=0, scale=1, pscale=1){
 
         out.shift <- x@shift + shift
         out.power <- x@power * pscale
-
-        ## floor before exponentiation to avoid NaN (or worse, if 1/power is even...)
-        x <- pmax(x,0)
         
         if (out.power == 0){
           result <- exp(x)
         } else {
+          ## floor to avoid NaN (or worse, if 1/power is even...)
+          x <- pmax(x,0)
           result <- (out.power * x + 1)^(1/out.power)
         }
         result <- result - out.shift
