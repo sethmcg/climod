@@ -44,6 +44,7 @@
 ##' tailskill(obs, bad)
 ##'
 ##' @importFrom KernSmooth bkde
+##' @importFrom stats na.omit
 ##' 
 ##' @export
 

@@ -22,6 +22,7 @@
 ##' pdfskill(obs, mod)
 ##'
 ##' @importFrom KernSmooth bkde
+##' @importFrom stats na.omit
 ##' 
 ##' @export
 

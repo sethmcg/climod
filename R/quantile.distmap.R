@@ -14,6 +14,8 @@
 ##' @param which The name of the pdf (xpdf or ypdf) to use for
 ##' quantiles.  Defaults to "xpdf".
 ##'
+##' @param ... Further arguments passed from other functions.
+##'
 ##' @return The return value of the function.
 ##'
 ##' @examples
@@ -23,6 +25,8 @@
 ##' d <- distmap(x, y)
 ##' quantile(d)
 ##' quantile(d, which="ypdf", prob=c(25,50,75)/100)
+##'
+##' @importFrom stats quantile
 ##' 
 ##' @export
 
