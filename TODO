@@ -1,6 +1,7 @@
 R
 library(ncdf4)
 library(KernSmooth)
+library(quantreg)
 library(devtools)
 load_all()
 check()
@@ -32,20 +33,21 @@ rm foo bar
 end
 cd ..
 
+Update: compare outputs from bc.prec.R and bc.temp.R in vignettes
 
-Argh, some change has snuck in here without me noticing.  Must see if
-I can track it down...
 
 ##########################
 
 VIGNETTES:
 
-Minimal changes to code - just get it CRAN-worthy
+obs data - basics of netcdf interactions
 
-In the temp example, dive into the details of biascorrect() 
-In the prec example, abstract up higher
+narccap - temp - deep dive into KDDM algorithms
 
-Need a CORDEX-based example that does full-transient with trend
+cordex - tmax - normalization of the transient
+
+cordex - prec - normalization of precip
+
 
 
 #####
@@ -86,18 +88,13 @@ use netcdf data need to go in a vignette (q.v. below)]
 #####
 NEW FEATURES:
 
-> For CORDEX, need to pull out the trend rather than the mean
-> 	fit trend with a 2nd-order curve
-> 	fit trend to cur+fut, not separately
-> 	match mean of cur to mean of obs
-> 	but don't do any other adjustments of trend
-> 
-> OLD: detrend [all normalization params]
-> 	exploit cyclic nature of data - param by year + fit
-> 	more than first-order?
+maxent for box-cox fitting
 
-Obsolete.  Replace this line of thinking with segmented normalization.
-
+updates to normalize / denormalize
+	attributes -> greek letters
+	add identity norm (no-op)
+	remove range norm
+	power -> boxcox
 
 Once nc_ingest is linking coord vars to data via (string) dimnames:
 	* overload [] with arg coordinate=TRUE to do coord range subset
@@ -126,8 +123,11 @@ for plot.cslice - 2 lists -> matrices (pad w/NA) for mplot
 mplot has been obsoleted by as.matrix.list(), which lets you convert
 lists to matrices to pass to matplot, optionally pulling a sub-element
 as you go.  Probably I should just remove mplot entirely; it shows up
-in the examples of normalize, denormalize, and tailskill.
+in the examples of normalize, denormalize, tailskill, and akde.
 
+pfit + plot?
+
+bplot?
 
 xyapply?
 

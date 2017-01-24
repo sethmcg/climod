@@ -10,11 +10,12 @@ Depends:
     R (>= 3.1.1)
 Imports:
     KernSmooth,
-    scales,
-    ncdf4,
     graphics,
-    stats,
-    methods
+    methods,
+    ncdf4,
+    quantreg,
+    scales,
+    stats
 Suggests:
     nor1mix,
     testthat,
