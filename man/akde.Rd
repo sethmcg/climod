@@ -46,6 +46,7 @@ assumed to be sorted.  Although it doesn't appear to matter in
 practice, this function sorts them just in case.
 }
 \examples{
+library(KernSmooth)
 set.seed(222)
 x <- rgamma(300, shape=3, scale=2)
 d <- namelist(density, bkde, akde)

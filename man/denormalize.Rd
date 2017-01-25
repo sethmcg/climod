@@ -9,18 +9,16 @@ denormalize(x, shift = 0, scale = 1, pscale = 1)
 \arguments{
 \item{x}{A normalized vector}
 
-\item{shift}{An adjustment factor added to the denormalized data.
-Only used for "zscore" and "range" normalizations.  Adjusts the
-mean of zscore-normalized data.  For range-normalized data, a
-2-element vector can be supplied to adjust both ends of the range.}
+\item{shift}{An adjustment factor added to the data during
+denormalization.  Adjusts mu or gamma, respectively, for "zscore"
+and "boxcox" normalization.}
 
 \item{scale}{A multiplicative adjustment factor applied to the
-denormalized data.  Only used for the "zscore" and "power"
-normalizations.  Adjusts the variance for zscore-normalized data,
-and the scale (variance / mean) for power-normalized data.}
+denormalized data.  Only used for the "zscore" normalization.
+Adjusts the variance of zscore-normalized data.}
 
 \item{pscale}{A multiplicative adjustment factor applied to the
-exponent when denormalizing power-scaled data.}
+exponent when denormalizing boxcox-transformed data.}
 }
 \description{
 Reverses the transformation applied to a vector of values by the
@@ -70,9 +68,9 @@ mplot(lapply(ndata,density), type="l")
 legend("topleft",names(ndata),lwd=1,lty=seq(N),col=seq(N))
 
 denorm <- lapply(ndata[1:3], denormalize)
-adjust <- ndata$obs@scale / ndata$cur@scale
-denorm$bcc <- denormalize(ndata$bcc, SCALE=adjust)
-denorm$bcf <- denormalize(ndata$bcf, SCALE=adjust)
+adjust <- ndata$obs@lambda / ndata$cur@lambda
+denorm$bcc <- denormalize(ndata$bcc, scale=adjust)
+denorm$bcf <- denormalize(ndata$bcf, scale=adjust)
 
 N <- length(denorm)
 mplot(lapply(denorm,density), type="l")

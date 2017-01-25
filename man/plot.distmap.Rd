@@ -6,7 +6,7 @@
 and transfer function.}
 \usage{
 \method{plot}{distmap}(x, lim = range(c(x$xq, x$yq)), pscale = 0.2,
-  xmap = pretty(lim), map.args = list(col = "red", lty = 2),
+  xmap = quantile(x), map.args = list(col = "red", lty = 2),
   identity.args = list(), rug.args = NULL, pdf.args = NULL,
   transfer.args = list(col = "red", lwd = 2), skip = NULL, xlim = lim,
   ylim = lim, pxscale = pscale, pyscale = pscale, pxlim = c(min(ylim),
@@ -24,7 +24,9 @@ of the plot size (0 to 1).}
 
 \item{xmap}{A vector of x-values for the mapping lines.  Lines are
 drawn from the values specified by xmap up to the transfer
-function, then over to the y-axis.}
+function, then over to the y-axis.  Defaults to the (5, 10, 25,
+50, 75, 90, 95)th percentiles; \code{pretty(range(x))} can also be
+informative.}
 
 \item{map.args}{A list of arguments to the segments() function,
 which is used to draw the mapping lines.  Defaults to dashed red

@@ -35,13 +35,14 @@
 biascorrect <- function(bcdata, norm="zscore", dmap=FALSE, ...){
 
     ## normalize the three data components
-    if(norm=="power"){
-        alpha <- lapply(lapply(bcdata, unlist),findalpha)  ## ! Need findalpha as function!
+
+    if(norm=="boxcox"){
+        gamma <- lapply(lapply(bcdata, unlist), maxent)
         nbcd <- list()
-        nbcd$obs <- rapply(bcdata$obs, normalize, how="replace", norm=norm, shift=alpha$obs)    
-        nbcd$cur <- rapply(bcdata$cur, normalize, how="replace", norm=norm, shift=alpha$cur)
-        nbcd$fut <- rapply(bcdata$fut, normalize, how="replace", norm=norm, shift=alpha$cur)
-        # yes, shift=cur for fut
+        nbcd$obs <- rapply(bcdata$obs, normalize, how="replace", norm=norm, gamma=gamma$obs)    
+        nbcd$cur <- rapply(bcdata$cur, normalize, how="replace", norm=norm, gamma=gamma$cur)
+        nbcd$fut <- rapply(bcdata$fut, normalize, how="replace", norm=norm, gamma=gamma$cur)
+        # yes, using gamma$cur for the future case is intentional
     } else {    
         nbcd <- rapply(bcdata, normalize, how="replace", norm=norm)
     }
@@ -67,14 +68,12 @@ biascorrect <- function(bcdata, norm="zscore", dmap=FALSE, ...){
     pscale <- NA
 
     if(norm == "zscore"){
-        shift  <- adj$mean$obs - adj$mean$cur
-        scale  <- adj$sd$obs   / adj$sd$cur
+        shift  <- adj$mu$obs - adj$mu$cur
+        scale  <- adj$sigma$obs   / adj$sigma$cur
     }
-    if(norm == "range"){
-        shift  <- adj$range$obs - adj$range$cur
-    }
-    if(norm == "power"){
-        shift <- adj$shift$obs - adj$shift$cur
+
+    if(norm == "boxcox"){
+        shift <- adj$gamma$obs - adj$gamma$cur
         pscale <- 1
     }
 

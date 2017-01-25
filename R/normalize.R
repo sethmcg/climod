@@ -7,23 +7,22 @@
 ##' Three types of normalization are supported, chosen by the value of
 ##' the parameter \code{norm}:
 ##' 
-##' \code{"zscore"}: subtract the mean and divide by the standard
-##' deviation.  The result will have mean zero and unit standard
-##' deviation.  Also known as normalizing residuals, calculating the
-##' z-score, centering and scaling, or normalizing the 2nd central
-##' moment.  If the sample mean and sample variance are used (as in
-##' the default arguments), this is technically 'studentizing' the
-##' data.
+##' \code{"zscore"}: subtract the mean (mu) and divide by the standard
+##' deviation (sigma).  The result will have mean zero and unit
+##' standard deviation.  Also known as normalizing residuals,
+##' calculating the z-score, centering and scaling, or normalizing the
+##' 2nd central moment.  If the sample mean and sample variance are
+##' used (as in the default arguments), this is technically
+##' 'studentizing' the data.
 ##'
-##' \code{"range"}: subtract the minimum and divide by the range
-##' (max-min).  The default is to transform the data to have min 0 and
-##' max 1.
-##'
-##' \code{"power"}: apply the power transformation, which raises the
-##' data to a power and scales it appropriately such that it's
-##' continuous down to a power of 0, which becomes the log.  This
+##' \code{"boxcox"}: apply the Box-Cox power transformation, which
+##' raises the data to a power and scales it appropriately such that
+##' it's continuous down to a power of 0, which becomes the log.  This
 ##' transformation will stabilize the variance for highly-skewed data.
 ##'
+##' \code{"identity"}: passes the data through unchanged.  This option
+##' is sometimes useful for testing and development.
+##' 
 ##' Each normalization by default uses parameters based on the sample
 ##' statistics of the input, but these parameters can be overridden.
 ##' 
@@ -33,25 +32,19 @@
 ##' @param norm The type of normalization to apply.  See Details for
 ##' more information.  Type names can be abbreviated.
 ##'
-##' @param mean For zscore normalization, the mean.  Defaults to the
+##' @param mu For zscore normalization, the mean.  Defaults to the
 ##' sample mean.
 ##'
-##' @param sd For zscore normalization, the standard deviation.
+##' @param sigma For zscore normalization, the standard deviation.
 ##' Defaults to the sample standard deviation.
 ##'
-##' @param from For range normalization, the input range.  Defaults to
-##' range(x).
-##'
-##' @param to For range normalization, the output range.  Defaults to
-##' c(0,1).
-##'
-##' @param shift An offset to the data for the power transform
+##' @param gamma An offset to the data for the Box-Cox transform
 ##' normalization.  Must be greater than minus the minimum value,
 ##' otherwise NA values will result.  Defaults to zero.
 ##'
-##' @param power For the power transform normalization, the exponent
-##' of the power transform. Defaults to zero, which is ideal for
-##' gamma-distributed data.
+##' @param lambda For the Box-Cox transform normalization, the
+##' exponent of the power transform. Defaults to zero, which is ideal
+##' for gamma-distributed data.
 ##'
 ##' @return Both \code{normalize} and \code{denormalize} return a
 ##' vector of values.  \code{normalize} adds attributes to the vector
@@ -66,42 +59,28 @@
 ##' mplot(lapply(list(x,y),density), type="l")
 ##' str(y)
 ##' 
-##' # range normalization
-##' x <- sample(2:9, 5, replace=TRUE)
-##' y <- normalize(x, norm="range", from=c(1,10))
-##' range(x)
-##' range(y)
-##' str(y)
-##' 
-##' # power normalization
+##' # Box-Cox normalization
 ##' x <- rgamma(10000, shape=3, rate=4)
-##' y <- normalize(x, "power")
+##' y <- normalize(x, "boxcox")
 ##' mplot(lapply(list(x,y),density), type="l")
 ##' str(y)
 ##' 
 ##'
 ##' @seealso \code{\link{denormalize}}
 ##'
-##' @importFrom scales rescale
-##' @importFrom stats var sd
+##' @importFrom stats sd
 ##' 
 ##' @export
 
 
-## TODO: consider adding car::bcPower and car::yjPower (box-cox and
-## yeo-johnson) options for power normalization
-
-
 normalize <- function(x,
                       norm="zscore",
-                      mean=base::mean(x, na.rm=TRUE),
-                      sd=stats::sd(x, na.rm=TRUE),
-                      from=range(x, na.rm=TRUE),
-                      to=c(0,1),
-                      power=0,
-                      shift=0){
+                      mu=base::mean(x, na.rm=TRUE),
+                      sigma=stats::sd(x, na.rm=TRUE),
+                      lambda=0,
+                      gamma=0){
 
-    norm.names <- c("range", "zscore", "power")
+    norm.names <- c("zscore", "boxcox", "identity")
     n <- norm.names[pmatch(norm, norm.names)]
     if(is.na(n)){
       stop(paste("unknown normalization",norm))
@@ -111,28 +90,24 @@ normalize <- function(x,
 
     result <- NA
   
-    if(norm == "range"){
-        result <- rescale(x, to=to, from=from)
-        result@from <- from
-        result@to   <- to
-       }
-
     if(norm == "zscore"){
-        result <- (x - mean)/sd
-        result@mean <- mean
-        result@sd   <- sd
+        result       <- (x - mu)/sigma
+        result@mu    <- mu
+        result@sigma <- sigma
     }
     
-    if(norm=="power"){
-        x <- x + shift     
-        if (power == 0){
+    if(norm=="boxcox"){
+        x <- x + gamma     
+        if (lambda == 0){
             result <- log(x)
         } else {
-            result <- (x^power - 1) / power
+            result <- (x^lambda - 1) / lambda
         }
-        result@power <- power
-        result@shift <- shift
+        result@lambda <- lambda
+        result@gamma  <- gamma
     }
+
+    if(norm=="identity"){}   # no-op
     
     result@norm <- norm
     return(result)

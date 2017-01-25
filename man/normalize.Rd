@@ -4,10 +4,8 @@
 \alias{normalize}
 \title{Reversibly normalize a vector of values}
 \usage{
-normalize(x, norm = "zscore", mean = base::mean(x, na.rm = TRUE),
-  sd = stats::sd(x, na.rm = TRUE), from = range(x, na.rm = TRUE),
-  to = c(0, 1), scale = stats::var(x, na.rm = TRUE)/base::mean(x, na.rm =
-  TRUE), power = 0.25)
+normalize(x, norm = "zscore", mu = base::mean(x, na.rm = TRUE),
+  sigma = stats::sd(x, na.rm = TRUE), lambda = 0, gamma = 0)
 }
 \arguments{
 \item{x}{A vector of values to be transformed.}
@@ -15,26 +13,19 @@ normalize(x, norm = "zscore", mean = base::mean(x, na.rm = TRUE),
 \item{norm}{The type of normalization to apply.  See Details for
 more information.  Type names can be abbreviated.}
 
-\item{mean}{For zscore normalization, the mean.  Defaults to the
+\item{mu}{For zscore normalization, the mean.  Defaults to the
 sample mean.}
 
-\item{sd}{For zscore normalization, the standard deviation.
+\item{sigma}{For zscore normalization, the standard deviation.
 Defaults to the sample standard deviation.}
 
-\item{from}{For range normalization, the input range.  Defaults to
-range(x).}
+\item{lambda}{For the Box-Cox transform normalization, the
+exponent of the power transform. Defaults to zero, which is ideal
+for gamma-distributed data.}
 
-\item{to}{For range normalization, the output range.  Defaults to
-c(0,1).}
-
-\item{scale}{For power normalization, the scaling factor to divide
-by before the power transform.  Defaults to the sample variance
-divided by the sample mean, which is the scale parameter of the
-gamma and related distributions.}
-
-\item{power}{For power normalization, the exponent of the power
-transform. Defaults to 0.25, which is empirically known to be
-well-suited for working with precipitation.}
+\item{gamma}{An offset to the data for the Box-Cox transform
+normalization.  Must be greater than minus the minimum value,
+otherwise NA values will result.  Defaults to zero.}
 }
 \value{
 Both \code{normalize} and \code{denormalize} return a
@@ -51,21 +42,21 @@ the transformation can be reversed later on.
 Three types of normalization are supported, chosen by the value of
 the parameter \code{norm}:
 
-\code{"zscore"}: subtract the mean and divide by the standard
-deviation.  The result will have mean zero and unit standard
-deviation.  Also known as normalizing residuals, calculating the
-z-score, centering and scaling, or normalizing the 2nd central
-moment.  If the sample mean and sample variance are used (as in
-the default arguments), this is technically 'studentizing' the
-data.
+\code{"zscore"}: subtract the mean (mu) and divide by the standard
+deviation (sigma).  The result will have mean zero and unit
+standard deviation.  Also known as normalizing residuals,
+calculating the z-score, centering and scaling, or normalizing the
+2nd central moment.  If the sample mean and sample variance are
+used (as in the default arguments), this is technically
+'studentizing' the data.
 
-\code{"range"}: subtract the minimum and divide by the range
-(max-min).  The default is to transform the data to have min 0 and
-max 1.
+\code{"boxcox"}: apply the Box-Cox power transformation, which
+raises the data to a power and scales it appropriately such that
+it's continuous down to a power of 0, which becomes the log.  This
+transformation will stabilize the variance for highly-skewed data.
 
-\code{"power"}: divide by the scale (variance/mean) and raise to a
-power.  This transformation will stabilize the variance for
-highly-skewed data.
+\code{"identity"}: passes the data through unchanged.  This option
+is sometimes useful for testing and development.
 
 Each normalization by default uses parameters based on the sample
 statistics of the input, but these parameters can be overridden.
@@ -78,16 +69,9 @@ y <- normalize(x)
 mplot(lapply(list(x,y),density), type="l")
 str(y)
 
-# range normalization
-x <- sample(2:9, 5, replace=TRUE)
-y <- normalize(x, norm="range", from=c(1,10))
-range(x)
-range(y)
-str(y)
-
-# power normalization
+# Box-Cox normalization
 x <- rgamma(10000, shape=3, rate=4)
-y <- normalize(x, "power")
+y <- normalize(x, "boxcox")
 mplot(lapply(list(x,y),density), type="l")
 str(y)
 

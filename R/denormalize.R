@@ -1,12 +1,11 @@
-utils::globalVariables(c("norm","from","to","scale","power","mean","sd"))
+utils::globalVariables(c("norm","mu","sigma","lambda","gamma"))
 ## The overloaded use of @ involves non-standard evaluation that makes
 ## devtools::check() (or rather, codetools::checkUsagePackage()) think
-## that the attribute names are undefined global variable.  Declaring
+## that the attribute names are undefined global variables.  Declaring
 ## them to be globalVariables suppresses the NOTE that would otherwise
-## result.  (It actually only complains about "from","to", and
-## "power", because the others all correpond to functions that come
-## from base:: or have been imported elsewhere, but I list them all
-## here to make it clearer what's going on.)
+## result.  (It actually doesn't complain about "norm", because
+## base::norm() exists, but I list all the attributes here to make it
+## clearer what's going on.)
 
 ##' Undo the normalization of a vector of values
 ##'
@@ -38,17 +37,16 @@ utils::globalVariables(c("norm","from","to","scale","power","mean","sd"))
 ##' 
 ##' @param x A normalized vector
 ##' 
-##' @param shift An adjustment factor added to the denormalized data.
-##' Only used for "zscore" and "range" normalizations.  Adjusts the
-##' mean of zscore-normalized data.  For range-normalized data, a
-##' 2-element vector can be supplied to adjust both ends of the range.
+##' @param shift An adjustment factor added to the data during
+##' denormalization.  Adjusts mu or gamma, respectively, for "zscore"
+##' and "boxcox" normalization.
 ##'
 ##' @param scale A multiplicative adjustment factor applied to the
 ##' denormalized data.  Only used for the "zscore" normalization.
 ##' Adjusts the variance of zscore-normalized data.
 ##'
 ##' @param pscale A multiplicative adjustment factor applied to the
-##' exponent when denormalizing power-transformed data.
+##' exponent when denormalizing boxcox-transformed data.
 ##' 
 ##' @examples
 ##'
@@ -70,9 +68,9 @@ utils::globalVariables(c("norm","from","to","scale","power","mean","sd"))
 ##' legend("topleft",names(ndata),lwd=1,lty=seq(N),col=seq(N))
 ##' 
 ##' denorm <- lapply(ndata[1:3], denormalize)
-##' adjust <- ndata$obs@scale / ndata$cur@scale
-##' denorm$bcc <- denormalize(ndata$bcc, SCALE=adjust)
-##' denorm$bcf <- denormalize(ndata$bcf, SCALE=adjust)
+##' adjust <- ndata$obs@lambda / ndata$cur@lambda
+##' denorm$bcc <- denormalize(ndata$bcc, scale=adjust)
+##' denorm$bcf <- denormalize(ndata$bcf, scale=adjust)
 ##' 
 ##' N <- length(denorm)
 ##' mplot(lapply(denorm,density), type="l")
@@ -80,8 +78,6 @@ utils::globalVariables(c("norm","from","to","scale","power","mean","sd"))
 ##'
 ##' @seealso \code{\link{normalize}}
 ##'
-##' @importFrom scales rescale
-##' 
 ##' @export
 
 
@@ -89,43 +85,39 @@ denormalize <- function(x, shift=0, scale=1, pscale=1){
 
     norm <- x@norm
     
-    if(!norm %in% c("range", "zscore", "power")){
+    if(!norm %in% c("zscore", "boxcox", "identity")){
         stop(paste("unknown normalization",norm))
     }
      
-    if(norm == "range"){
-
-        out.range <- x@from + shift
-        
-        result <- rescale(x, from=x@to, to=out.range)
-        result@range <- NULL
-    }
-
     if(norm == "zscore"){
 
-        out.mean <- x@mean + shift
-        out.sd   <- x@sd   * scale
+        out.mu    <- x@mu    + shift
+        out.sigma <- x@sigma * scale
            
-        result <- x * out.sd + out.mean
-        result@mean <- NULL
-        result@sd   <- NULL
+        result <- x * out.sigma + out.mu
+        result@mu <- NULL
+        result@sigma   <- NULL
     }
 
-    if(norm=="power"){
+    if(norm=="boxcox"){
 
-        out.shift <- x@shift + shift
-        out.power <- x@power * pscale
+        out.gamma  <- x@gamma + shift
+        out.lambda <- x@lambda * pscale
         
-        if (out.power == 0){
+        if (out.lambda == 0){
           result <- exp(x)
         } else {
           ## floor to avoid NaN (or worse, if 1/power is even...)
           x <- pmax(x,0)
-          result <- (out.power * x + 1)^(1/out.power)
+          result <- (out.lambda * x + 1)^(1/out.lambda)
         }
-        result <- result - out.shift
-	result@power <- NULL
-	result@shift <- NULL
+        result <- result - out.gamma
+	result@gamma  <- NULL
+	result@lambda <- NULL
+    }
+
+    if(norm=="identity"){
+        result <- x
     }
         
     result@norm <- NULL
