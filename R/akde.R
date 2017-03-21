@@ -45,6 +45,9 @@
 ##' mplot(p)
 ##' legend("topright", names(d), lty=seq(3), col=seq(3))
 ##'
+##' @importFrom stats bw.nrd
+##' @importFrom quantreg akj
+##' 
 ##' @export
 
 akde <- function(x,
