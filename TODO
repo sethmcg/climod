@@ -42,6 +42,8 @@ VIGNETTES:
 
 obs data - basics of netcdf interactions
 
+obs data - climatological slicing
+
 narccap - temp - deep dive into KDDM algorithms
 
 cordex - tmax - normalization of the transient
@@ -88,14 +90,6 @@ use netcdf data need to go in a vignette (q.v. below)]
 #####
 NEW FEATURES:
 
-maxent for box-cox fitting
-
-updates to normalize / denormalize
-	attributes -> greek letters
-	add identity norm (no-op)
-	remove range norm
-	power -> boxcox
-
 Once nc_ingest is linking coord vars to data via (string) dimnames:
 	* overload [] with arg coordinate=TRUE to do coord range subset
 	* do better netcdf output
@@ -131,15 +125,19 @@ bplot?
 
 xyapply?
 
+helix plot for timeseries
+	r = value of variable
+	theta = day of year
+	z = time
+	use in vignette to explain cslicing
+
+
 #####
 OPEN ISSUES:
 
 rename:  distmap -> kddm
 
-namelist(obs,cur,fut) -> class bcdata
-
-? fit lambda instead of 0.25 for power norm?
-figure out what to do with denormalize when power is different
+namelist(obs,cur,fut) -> class bcdata?  class ocf?
 
 avoid overfitting of xfer f'n:
 	splinefun -> smooth.spline? [need to guarantee monotonicity]
