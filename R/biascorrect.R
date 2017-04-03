@@ -13,6 +13,11 @@
 ##' @param norm The type of normalization to use.  See
 ##' \code{\link{normalize}} for more details.
 ##'
+##' @param minobs The minimum number of observations to attempt a bias
+##' correction.  If there are fewer that this many observations (e.g.,
+##' for precipitaiton in a very dry location), non-zero model values
+##' are set to NA.
+##'
 ##' @param dmap Logical; if TRUE, returns the \code{\link{distmap}}
 ##' object generated during bias correction as an element named "dmap"
 ##' in the returned list.  N.B.: This option defaults to FALSE because
@@ -32,17 +37,39 @@
 ##' 
 ##' @export
 
-biascorrect <- function(bcdata, norm="zscore", dmap=FALSE, ...){
+biascorrect <- function(bcdata, norm="zscore", minobs=10, dmap=FALSE, ...){
 
-    ## normalize the three data components
+  ## If there's too little data to estimate a PDF for either obs or
+  ## cur, it's not possible to bias-correct.  Bail out and set the
+  ## data values to NA instead, to indicate "the model had data here,
+  ## but there's no way to tell what the correct values are."
+  
+  if(sum(is.finite(unlist(bcdata$obs))) < minobs |
+     sum(is.finite(unlist(bcdata$cur))) < minobs ){
+    unfixable <- function(x){
+      x@uncorrectable <- is.finite(x)
+      x + NA
+    }
+    return(rapply(bcdata, unfixable, how="replace"))
+  }
+
+  
+  ## normalize the three data components
 
     if(norm=="boxcox"){
-        gamma <- lapply(lapply(bcdata, unlist), maxent)
-        nbcd <- list()
-        nbcd$obs <- rapply(bcdata$obs, normalize, how="replace", norm=norm, gamma=gamma$obs)    
-        nbcd$cur <- rapply(bcdata$cur, normalize, how="replace", norm=norm, gamma=gamma$cur)
-        nbcd$fut <- rapply(bcdata$fut, normalize, how="replace", norm=norm, gamma=gamma$cur)
-        # yes, using gamma$cur for the future case is intentional
+
+      ## You can't really apply an adjustment to the denormalization
+      ## for Box-Cox; you need to use the same parameter values you
+      ## used for the obs or things go wonky.  This means that you
+      ## also want to use the same params over all times in both cur
+      ## and fut, so that you're not discarding any climate change
+      ## signal when you normalize.  Given that, it makes sense to use
+      ## a single value for all three, so we pool data to fit gamma to
+      ## get the best compromise value.
+
+      gamma <- megamma(unlist(bcdata, use.names=FALSE))
+      nbcd <- rapply(bcdata, normalize, how="replace", norm=norm, gamma=gamma)
+      
     } else {    
         nbcd <- rapply(bcdata, normalize, how="replace", norm=norm)
     }
@@ -73,7 +100,7 @@ biascorrect <- function(bcdata, norm="zscore", dmap=FALSE, ...){
     }
 
     if(norm == "boxcox"){
-        shift <- adj$gamma$obs - adj$gamma$cur
+        shift <- 0
         pscale <- 1
     }
 
