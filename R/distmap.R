@@ -13,7 +13,7 @@
 ##' kernel density estimation of the PDFs using the trapezoid rule.  It
 ##' uses monotone Hermite splines for the construction to guarantee
 ##' monotonicity of the transfer function.
-##' 
+##'
 ##' @param x A vector of values whose distribution is to be mapped.
 ##'
 ##' @param y A vector of values whose distribution is the target of
@@ -23,18 +23,24 @@
 ##' \code{stats::density} or \code{KernSmooth::bkde}.  This function
 ##' must return an object that can be passed as input to
 ##' \code{\link{pdf2cdf}}.
-##' 
+##'
 ##' @param pgrid A vector of probability values used for the mapping
 ##' between CDFs.  It need not be regular but must be strictly
 ##' increasing.
 ##'
+##' @param truncate Logical; if TRUE, truncates the kernel density
+##' estimates of the PDFs at the minimum value of the input data.
+##' This is useful for preventing the transfer function from
+##' generating negative values in the case of a variable bounded at
+##' zero like precipitation.  Defaults to FALSE.
+##'
 ##' @param na.rm Logical; if TRUE (default), remove NA values before
 ##' constructing distribution mapping.
-##' 
+##'
 ##' @param ... Additional arguments to densfun.
 ##'
 ##' @return A list of class \code{distmap}, with the following elements:
-##' 
+##'
 ##' x,y: The input x and y data.
 ##'
 ##' pgrid: The vector of probabilities used to construct the mapping.
@@ -46,7 +52,7 @@
 ##'
 ##' transfer: A function that will transform x to have the same
 ##' distribution as y.
-##' 
+##'
 ##'
 ##' @examples
 ##' library(nor1mix)
@@ -87,7 +93,9 @@
 
 
 
-distmap <- function(x, y, densfun=bkde, pgrid=ppoints(1000), na.rm=TRUE, ...){
+distmap <- function(x, y, densfun=KernSmooth::bkde,
+                    pgrid=ppoints(1000), truncate=FALSE,
+                    na.rm=TRUE, ...){
 
     if(na.rm){
         x <- x[is.finite(x)]
@@ -107,6 +115,11 @@ distmap <- function(x, y, densfun=bkde, pgrid=ppoints(1000), na.rm=TRUE, ...){
    
     xpdf <- densfun(x, ...)
     ypdf <- densfun(y, ...)
+
+    if(truncate){
+      xpdf$y[xpdf$x<min(x)] <- 0
+      ypdf$y[ypdf$x<min(y)] <- 0
+    }
     
     xcdf <- pdf2cdf(xpdf)
     ycdf <- pdf2cdf(ypdf)
