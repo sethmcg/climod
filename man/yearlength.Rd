@@ -53,4 +53,3 @@ x@calendar <- "martian"
 yearlength(x)
 
 }
-

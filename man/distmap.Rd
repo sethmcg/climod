@@ -5,7 +5,8 @@
 \title{Construct a mapping between the distributions of two sets of
 values.}
 \usage{
-distmap(x, y, densfun = bkde, pgrid = ppoints(1000), na.rm = TRUE, ...)
+distmap(x, y, densfun = KernSmooth::bkde, pgrid = ppoints(1000),
+  truncate = FALSE, na.rm = TRUE, ...)
 }
 \arguments{
 \item{x}{A vector of values whose distribution is to be mapped.}
@@ -21,6 +22,12 @@ must return an object that can be passed as input to
 \item{pgrid}{A vector of probability values used for the mapping
 between CDFs.  It need not be regular but must be strictly
 increasing.}
+
+\item{truncate}{Logical; if TRUE, truncates the kernel density
+estimates of the PDFs at the minimum value of the input data.
+This is useful for preventing the transfer function from
+generating negative values in the case of a variable bounded at
+zero like precipitation.  Defaults to FALSE.}
 
 \item{na.rm}{Logical; if TRUE (default), remove NA values before
 constructing distribution mapping.}
@@ -90,4 +97,3 @@ abline(h=quantile(z,pp), col="blue", lty=c(4,3,2,3,4))
 
 
 }
-

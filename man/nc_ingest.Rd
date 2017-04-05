@@ -47,4 +47,3 @@ object produced by \code{nc_open}.
 \seealso{
 \code{\link{atsign}}
 }
-

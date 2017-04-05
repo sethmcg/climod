@@ -101,4 +101,3 @@ vignette} for examples.
 \seealso{
 \code{\link{slice}}
 }
-

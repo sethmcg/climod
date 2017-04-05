@@ -2,6 +2,7 @@
 % Please edit documentation in R/slice.R
 \name{slice}
 \alias{slice}
+\alias{slice}
 \alias{subslice}
 \alias{unslice}
 \title{Climatological slicing of timeseries}
@@ -45,4 +46,3 @@ whether the \code{cslice} object is segmented (i.e., called with
 \code{split=TRUE}).  The \code{subslice} function also accepts a
 \code{split} argument to override the default.
 }
-

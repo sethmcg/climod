@@ -46,4 +46,3 @@ plot(density(r))
 plot(pdf2cdf(density(r)),type='l')
 
 }
-

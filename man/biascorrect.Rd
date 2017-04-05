@@ -4,7 +4,7 @@
 \alias{biascorrect}
 \title{Bias correction of climate model output using KDDM.}
 \usage{
-biascorrect(bcdata, norm = "zscore", dmap = FALSE, ...)
+biascorrect(bcdata, norm = "zscore", minobs = 10, dmap = FALSE, ...)
 }
 \arguments{
 \item{bcdata}{The data to be bias-corrected.  A list with elements
@@ -12,6 +12,11 @@ named "obs", "cur", and "fut".}
 
 \item{norm}{The type of normalization to use.  See
 \code{\link{normalize}} for more details.}
+
+\item{minobs}{The minimum number of observations to attempt a bias
+correction.  If there are fewer that this many observations (e.g.,
+for precipitaiton in a very dry location), non-zero model values
+are set to NA.}
 
 \item{dmap}{Logical; if TRUE, returns the \code{\link{distmap}}
 object generated during bias correction as an element named "dmap"
@@ -39,4 +44,3 @@ y <- "more example code"
 paste(x, y)
 
 }
-

@@ -4,7 +4,7 @@
 \alias{as.matrix.list}
 \title{Converts a list to a matrix, padding vectors with NA to fit.}
 \usage{
-\method{as.matrix}{list}(x, element = NULL, ...)
+as.matrix.list(x, element = NULL, ...)
 }
 \arguments{
 \item{x}{list to be converted to a matrix}
@@ -48,4 +48,3 @@ d <- lapply(y, density, na.rm=TRUE)
 matplot(as.matrix(d, "x"), as.matrix(d, "y"), type='l')
 
 }
-

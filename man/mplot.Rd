@@ -46,4 +46,3 @@ mplot(d, type="l")
 \seealso{
 \code{\link[graphics]{matplot}}
 }
-

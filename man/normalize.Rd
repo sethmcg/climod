@@ -80,4 +80,3 @@ str(y)
 \seealso{
 \code{\link{denormalize}}
 }
-

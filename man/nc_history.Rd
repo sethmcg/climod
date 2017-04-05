@@ -22,4 +22,3 @@ If a history attribute already exists, the comment is prepended to
 it and separated by a carriage return.  A datestamp (produced by
 \code{date()}) is added to the beginning of the comment.
 }
-

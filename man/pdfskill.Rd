@@ -32,4 +32,3 @@ mod <- rnorm(1000, mean=0.3, sd=0.7)
 pdfskill(obs, mod)
 
 }
-

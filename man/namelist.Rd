@@ -24,4 +24,3 @@ n <- namelist(x,y,z)
 str(namelist)
 
 }
-

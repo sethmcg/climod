@@ -54,4 +54,3 @@ tailskill(obs, good)
 tailskill(obs, bad)
 
 }
-

@@ -44,4 +44,3 @@ legend("topright", c("obs","mod","bc","mod2","bc2"),
        col=c("black","red","red","blue","blue"), lty=c(1,1,2,1,2))
 
 }
-

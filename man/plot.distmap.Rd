@@ -106,4 +106,3 @@ plot(dmap, pscale=0.1, id=list(col="blue"),
 
 
 }
-

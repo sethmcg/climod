@@ -80,4 +80,3 @@ legend("topright",names(denorm),lwd=1,lty=seq(N),col=seq(N))
 \seealso{
 \code{\link{normalize}}
 }
-

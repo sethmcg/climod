@@ -37,4 +37,3 @@ quantile(d)
 quantile(d, which="ypdf", prob=c(25,50,75)/100)
 
 }
-

@@ -44,4 +44,3 @@ namelist(obs,cur,fut)
 dedrizzle(namelist(obs, cur, fut))
 
 }
-
