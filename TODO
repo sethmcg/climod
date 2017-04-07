@@ -55,16 +55,13 @@ cordex - prec - normalization of precip
 #####
 CODE:
 
-copyatts:
-	(see fixme.copyatts.R in old/)
-	NULL values in e.g. dimnames causes atts to be lost on []
-	update nc_ingest() to fill dimnames with string(coord vars)
-	       need att to track original type (float, double, etc.)
-	skip dimnames on copyatts() if dimensions don't match
-
-	from ?'[': "Subsetting (except by an empty index) will drop
-     	     	   all attributes except 'names', 'dim' and
-     	     	   'dimnames'."
+nc_ingest:
+	make culling optional
+	make skipping dummy variables optional
+	don't do anything with dimnames
+	create a dimvars = c("lon", "lat", "time") attribute instead
+	see if this allows ingestion of coord-only files (e.g., shard time)
+	? need att to track original type (float, double, etc.)
 
 plot.distmap:
 	base qqplot uses approx() when arrays are different sizes
