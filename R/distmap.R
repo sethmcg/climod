@@ -34,6 +34,11 @@
 ##' generating negative values in the case of a variable bounded at
 ##' zero like precipitation.  Defaults to FALSE.
 ##'
+##' @param trim Logical; if TRUE, omits possible outlier values when
+##' constructing the mapping.  Outliers are detected using Chauvenet's
+##' criterion (whether the probability of the value is less than 1/N,
+##' assuming normality).  Defaults to FALSE.
+##' 
 ##' @param na.rm Logical; if TRUE (default), remove NA values before
 ##' constructing distribution mapping.
 ##'
@@ -94,7 +99,7 @@
 
 
 distmap <- function(x, y, densfun=KernSmooth::bkde,
-                    pgrid=ppoints(1000), truncate=FALSE,
+                    pgrid=ppoints(1000), truncate=FALSE, trim=FALSE,
                     na.rm=TRUE, ...){
 
     if(na.rm){
@@ -111,7 +116,12 @@ distmap <- function(x, y, densfun=KernSmooth::bkde,
     stopifnot(all(pgrid >= 0))
     stopifnot(all(pgrid <= 1))
     stopifnot(all(diff(pgrid) > 0))
-              
+
+    if(trim){
+      ## HERE!
+      x <- chauvenet(x)
+      y <- chauvenet(y)
+    }
    
     xpdf <- densfun(x, ...)
     ypdf <- densfun(y, ...)
