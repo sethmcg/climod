@@ -34,10 +34,11 @@
 ##' generating negative values in the case of a variable bounded at
 ##' zero like precipitation.  Defaults to FALSE.
 ##'
-##' @param trim Logical; if TRUE, omits possible outlier values when
-##' constructing the mapping.  Outliers are detected using Chauvenet's
-##' criterion (whether the probability of the value is less than 1/N,
-##' assuming normality).  Defaults to FALSE.
+##' @param trim Logical; if TRUE, omits very extreme values when
+##' constructing the mapping.  This is useful for preventing
+##' overfitting of the tails in heavy-tailed variables like
+##' precipitation.  Extreme values are detected using the
+##' \code{\link{chauvenet}} function.  Defaults to FALSE.
 ##' 
 ##' @param na.rm Logical; if TRUE (default), remove NA values before
 ##' constructing distribution mapping.
@@ -118,7 +119,6 @@ distmap <- function(x, y, densfun=KernSmooth::bkde,
     stopifnot(all(diff(pgrid) > 0))
 
     if(trim){
-      ## HERE!
       x <- chauvenet(x)
       y <- chauvenet(y)
     }

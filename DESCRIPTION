@@ -2,10 +2,10 @@ Package: climod
 Title: Bias correction and other tools for climate model output
 Version: 0.0.1
 Authors@R: person("Seth", "McGinnis", , "mcginnis@ucar.edu", role = c("aut", "cre"))
-Description: Bias correction via kernel density distribution mapping
-    (KDDM), multivariate bias correction via concurrent decorrelation,
-    and miscellaneous utilities for working with regional climate
-    model (RCM) output in netcdf format.
+Description: Bias correction via KDDM (Kernel Density Distribution
+    Mapping: quantile mapping based on nonparametric PDF estimates)
+    plus associated utilities for working with regional climate model
+    (RCM) output in netcdf format.
 Depends:
     R (>= 3.1.1)
 Imports:
