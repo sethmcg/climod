@@ -7,8 +7,11 @@
 ##' where N is the number of data points + 1/2, under the assumption that
 ##' the data is gaussian.
 ##'
-##' The probability bounds are calculated using \code{qnorm} with the
-##' sample mean and standard deviation.
+##' The probability bounds are calculated using \code{qnorm}.  Instead
+##' of using the sample mean and standard deviation, this function
+##' uses the median and the MAD (median absolute deviation), which are
+##' more robust against the effects of very extreme values.
+##'
 ##'
 ##' @param x A vector of values to trim.
 ##'
@@ -22,16 +25,24 @@
 ##' x <- c(9, 10, 10, 10, 11, 50)
 ##' chauvenet(x)
 ##' chauvenet(c(x, -20), upper=FALSE)
+##'
+##' set.seed(222)
+##' y <- c(rnorm(100))
+##' range(y)
+##' range(chauvenet(y))
+##' z <- c(y, 100, 1000)
+##' qnorm(1-1/12, mean(z), sd(z))
+##' range(chauvenet(z))
 ##' @export
 
 chauvenet <- function(x, upper=TRUE, lower=TRUE){
 
   n <- length(x) + 1/2
-  mu  <- mean(x)
-  sigma <- sd(x)
+  mu <- median(x)
+  sig <- mad(x)
 
-  if(lower){ x <- x[!(x < qnorm(1/n, mu, sigma))] }
-  if(upper){ x <- x[!(x > qnorm(1-1/n, mu, sigma))] }
+  if(lower){ x <- x[!(x < qnorm(1/n, mu, sig))] }
+  if(upper){ x <- x[!(x > qnorm(1-1/n, mu, sig))] }
 
   return(x)
 }
