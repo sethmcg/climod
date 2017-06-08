@@ -31,8 +31,9 @@
 ##' @param globalatts Logical; if true, reads in global attributes in
 ##' addition to data variables.  (Defaults to FALSE.)
 ##'
-##' @return A list containing the variables in the netcdf file with
-##' named dimensions and attributes as in the netcdf file.
+##' @return An object of class 'nc' containing the variables in the
+##' netcdf file with named dimensions and attributes as in the netcdf
+##' file.
 ##' 
 ##' @seealso \code{\link{atsign}}
 ##' 

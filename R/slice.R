@@ -39,6 +39,9 @@ NULL
 
 ##' @rdname slice
 ##' @usage slice(x, how, outer=FALSE)
+##'
+##' @return a list of vectors, one for each climatological window.
+##' 
 ##' @export
 
 slice <- function(x, how, outer=FALSE){
@@ -54,6 +57,8 @@ slice <- function(x, how, outer=FALSE){
 ##' @rdname slice
 ##' @usage subslice(s, how, split=how$params$split)
 ##'
+##' @return a list of vectors, one for each climatological window.
+##' 
 ##' @export
 
 ## Subslice gets a split argument to override the default because its
@@ -82,6 +87,9 @@ subslice <- function(s, how, split=how$params$split){
 
 ##' @rdname slice
 ##' @usage unslice(s, how)
+##' 
+##' @return a single timeseries vector.
+##' 
 ##' @export
 
 unslice <- function(s, how){
