@@ -107,7 +107,9 @@ normalize <- function(x,
         result@gamma  <- gamma
     }
 
-    if(norm=="identity"){}   # no-op
+    if(norm=="identity"){
+      result <- x
+    }
     
     result@norm <- norm
     return(result)
