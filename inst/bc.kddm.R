@@ -5,9 +5,20 @@ suppressMessages(library(KernSmooth))
 suppressMessages(library(ncdf4))
 suppressMessages(library(quantreg))
 
-## Call as: Rscript --vanilla kddm.mpmd.R var obs cur fut cout fout
+## Call as: Rscript kddm.R var obs cur fut cout fout
+## (used to call with --vanilla but on cheyenne it can't find pkgs...)
 
 args <- commandArgs(trailingOnly=TRUE)
+
+## For testing
+#args <- c("tmax",
+#          "raw/tmax.livneh.NAM-22i/armsite.nc",
+#          "raw/tmax.hist.HadGEM2-ES.RegCM4.day.NAM-22i.raw/armsite.nc",
+#          "raw/tmax.rcp85.HadGEM2-ES.RegCM4.day.NAM-22i.raw/armsite.nc",
+#          "tmax.test.cur.nc",
+#          "tmax.test.fut.nc"
+#          )
+
 
 varname <- args[1]
 
@@ -49,20 +60,29 @@ if(any(sapply(indata, function(x){all(!is.finite(x))})) ||
 }
 
 
-## A separate time.nc file lives alongside each input file.
+## Normally there's a time coordinate variable in each file.  But if
+## the data has been sharded for parallelism, it gets pulled out into
+## its own file that lives alongside all the shards.  Here we attempt
+## to determine which is the case and automagically do the right
+## thing.
 
-## Note: we use sub instead of dirname+paste to preserve the names on
-## the array, and ncvar_get, etc. instead of nc_ingest because the
-## time files have no non-dimension vars in them.
+time <- lapply(nc, "[[", "time")
 
-timefiles <- sub("data\\.x.*\\.y.*\\.nc", "time.nc", infiles)
-time <- list()
-for(t in names(timefiles)){
-  timenc <- nc_open(timefiles[t])
-  time[[t]] <- ncvar_get(timenc, "time")
-  time[[t]]@units <- ncatt_get(timenc, "time", "units")$value
-  time[[t]]@calendar <- ncatt_get(timenc, "time", "calendar")$value
+## When sharded, the timefile is named "time.nc"
+timefiles <- paste(sapply(infiles, dirname), "time.nc", sep="/")
+names(timefiles) <- names(infiles)
+
+for(t in names(time)){
+  if(is.null(time[[t]])){    
+    ## Note: we do this stuff by hand instead of using nc_ingest
+    ## because the time files have no non-dimension vars in them.
+    timenc <- nc_open(timefiles[t])
+    time[[t]] <- ncvar_get(timenc, "time")
+    time[[t]]@units <- ncatt_get(timenc, "time", "units")$value
+    time[[t]]@calendar <- ncatt_get(timenc, "time", "calendar")$value
+  }   
 }
+
 
 ### Need to match up units and epochs
 time <- lapply(time, alignepochs, "days since 1950-01-01")
