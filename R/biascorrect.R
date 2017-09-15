@@ -50,7 +50,10 @@ biascorrect <- function(bcdata, norm="zscore", minobs=10, dmap=FALSE, ...){
       x@uncorrectable <- is.finite(x)
       x + NA
     }
-    return(rapply(bcdata, unfixable, how="replace"))
+    
+    result <- rapply(bcdata, unfixable, how="replace")
+    if(dmap){ result$distmap <- distmap(c(0,1),c(0,1)) }    
+    return(result)
   }
 
   
@@ -87,6 +90,8 @@ biascorrect <- function(bcdata, norm="zscore", minobs=10, dmap=FALSE, ...){
     adj <- lapply(adj, function(x){lapply(x, function(y){unlist(y)})})
     adj <- lapply(adj, function(x){x$norm<-NULL; x})
     adj <- rapply(adj, mean, how="replace")
+  ## Probably fix for entire month missing; need to test.
+#    adj <- rapply(adj, mean, how="replace", na.rm=TRUE)
     adj <- renest(adj)
 
     ## calculate adjustments for denormalization
@@ -113,11 +118,8 @@ biascorrect <- function(bcdata, norm="zscore", minobs=10, dmap=FALSE, ...){
     result$fut <- rapply(fixed$fut, denormalize, how="replace",
                          shift=shift, scale=scale, pscale=pscale)
     
-    if(dmap){
-        result$distmap <- mapping
-    }
+    if(dmap){ result$distmap <- mapping }
     
-#    copyatts(bcdata, result)
     return(result)
 }
 
