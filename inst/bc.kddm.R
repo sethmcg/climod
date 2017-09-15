@@ -10,13 +10,14 @@ suppressMessages(library(quantreg))
 
 args <- commandArgs(trailingOnly=TRUE)
 
-## For testing
-#args <- c("tmax",
-#          "raw/tmax.livneh.NAM-22i/armsite.nc",
-#          "raw/tmax.hist.HadGEM2-ES.RegCM4.day.NAM-22i.raw/armsite.nc",
-#          "raw/tmax.rcp85.HadGEM2-ES.RegCM4.day.NAM-22i.raw/armsite.nc",
-#          "tmax.test.cur.nc",
-#          "tmax.test.fut.nc"
+# For testing
+#args <- c("prec",
+#          "obs/prec.obs.livneh.elcentro.nc",
+#          "raw/prec.hist.HadGEM2-ES.RegCM4.elcentro.nc",
+#          "raw/prec.rcp85.HadGEM2-ES.RegCM4.elcentro.nc",
+#          "prec.test.cur.nc",
+#          "prec.test.fut.nc",
+#          "prec.test.Rdata"
 #          )
 
 
@@ -32,6 +33,15 @@ infiles["fut"] <- args[4]
 outfiles["cur"] <- args[5]
 outfiles["fut"] <- args[6]
 
+
+## If the 7th argument is defined, it's the name of a save file for
+## data slices and distmap objects from the observed average min and
+## max in the seasonal cycle, the slice containing the peak (single
+## greatest value) for cur and fut, and the year end (index 1).
+saveslice <- !is.na(args[7])
+if(saveslice){
+  savefile <- args[7]
+}
 
 norms <- c(prec="boxcox", tmax="zscore", tmin="zscore")
 
@@ -131,7 +141,16 @@ if(varname == "prec"){
 
 
 ## bias-correct each window
-fixdata <- lapply(datatobc, biascorrect, norm, truncate=(varname=="prec"))
+fixdata <- lapply(datatobc, biascorrect, norm, truncate=(varname=="prec"), dmap=saveslice)
+
+
+if(saveslice){
+  ## Have to separate out the distmaps, or things break
+  fixdata <- renest(fixdata)
+  dmaps <- fixdata$distmap
+  fixdata$distmap <- NULL
+  fixdata <- renest(fixdata)
+}
 
 
 ## rearrange back to sliced conformation
@@ -147,6 +166,47 @@ if(varname == "prec"){
 
 ## collate inner windows back into timeseries
 outdata <- mapply(unslice, bc, cwin, SIMPLIFY=FALSE)
+
+
+## Save distmaps and data at peak slices
+
+if(saveslice){
+
+  oraw <- lapply(wind, function(x){lapply(x, unlist)})
+  iraw <- mapply(subslice, wind, cwin, split=FALSE, SIMPLIFY=FALSE)
+  ifix <- mapply(subslice, bc,   cwin, split=FALSE, SIMPLIFY=FALSE)
+  
+  peaks <- c()
+  peaks["obsmin"]  <- which.min(sapply(oraw$obs, mean, na.rm=TRUE))
+  peaks["obsmax"]  <- which.max(sapply(oraw$obs, mean, na.rm=TRUE))
+  peaks["curpeak"] <- which.max(sapply(iraw$cur, max,  na.rm=TRUE))
+  peaks["futpeak"] <- which.max(sapply(iraw$fut, max,  na.rm=TRUE))
+
+  jdays <- round(peaks/length(fixdata)*365.25)
+  dates <- format(as.Date(jdays, origin="1950-01-1"), format="%b %d")
+
+  dmaps <- dmaps[peaks]
+  names(dmaps) <- names(peaks)
+
+  ## not needed:
+  ##  raw outer cont <- renest(oraw)[peaks]
+  ##  fix outer cont <- renest(ofix)[peaks]
+
+  ## (inner segemented doesn't really make sense)
+  
+  icraw <- renest(iraw)[peaks]; names(icraw) <- names(peaks)
+  icfix <- renest(ifix)[peaks]; names(icfix) <- names(peaks)
+  
+  osraw <- renest(wind)[peaks]; names(osraw) <- names(peaks)
+  osfix <- renest(bc)[peaks]  ; names(osfix) <- names(peaks)
+
+  innerdata <- list(raw=icraw, fix=icfix)
+  outerdata <- list(raw=osraw, fix=osfix)
+  
+  save(peaks, jdays, dates, dmaps, innerdata, outerdata, file=savefile)
+}
+
+
 
 
 ## write results out to netcdf file
