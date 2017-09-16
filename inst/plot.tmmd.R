@@ -11,6 +11,21 @@ library(ncdf4)
 
 args <- commandArgs(trailingOnly=TRUE)
 
+# # for testing
+# args <- c("rcp85 HadGEM2-ES WRF ftlogan",
+#           "obs/tmax.obs.livneh.ftlogan.nc",
+#           "raw/tmax.hist.HadGEM2-ES.WRF.ftlogan.nc",
+#           "raw/tmax.rcp85.HadGEM2-ES.WRF.ftlogan.nc",
+#           "tmax.test.tmmd.png")
+#
+# args <- c("rcp85 WRF GFDL-ESM2M armsite",
+#          "obs/tmax.obs.livneh.armsite.nc",
+#          "save-test/tmax.hist.GFDL-ESM2M.WRF.armsite.nc",
+#          "save-test/tmax.rcp85.GFDL-ESM2M.WRF.armsite.nc",
+#          "fig-save/tmmd/tmmd.rcp85.WRF.GFDL-ESM2M.armsite.png",
+#          "tmax")
+
+
 label <- args[1]
         
 maxfiles <- c()
@@ -20,14 +35,6 @@ maxfiles["fut"] <- args[4]
 
 outfile <- args[5]
 
-#label <- "rcp85 GFDL-ESM2M RegCM4 NAM-22i raw boulder 2036-2065"
-#
-#maxfiles <- c()
-#maxfiles["obs"] <- "obs/tmax.livneh.boulder.nc"
-#maxfiles["cur"] <- "ts/tmax.hist.GFDL-ESM2M.RegCM4.day.NAM-22i.raw.boulder.nc"
-#maxfiles["fut"] <- "ts/fut/tmax.rcp85.HadGEM2-ES.WRF.day.NAM-22i.raw.boulder.2036-2065.nc"
-#
-#outfile <- "raw.png"
 
 
 minfiles <- gsub("tmax", "tmin", maxfiles)
@@ -67,12 +74,12 @@ cdata <- lapply(data, function(x){ mapply(slice, x, dwin,
                                           MoreArgs=list(outer=TRUE),
                                           SIMPLIFY=FALSE)})
 
-capply <- function(x, f){
-  lapply(rapply(x, f, how="replace"), unlist)
+capply <- function(x, f, ...){
+  lapply(rapply(x, f, ..., how="replace"), unlist)
 }
 
 
-tdata <- lapply(lapply(cdata, capply, mean), as.matrix)
+tdata <- lapply(lapply(cdata, capply, mean, na.rm=TRUE), as.matrix)
 
 #sdata <- lapply(lapply(cdata, capply, sd), as.matrix)
 #upper <- mapply(`+`, tdata, sdata, SIMPLIFY=FALSE)

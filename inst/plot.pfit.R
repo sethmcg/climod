@@ -8,6 +8,16 @@ library(ncdf4)
 
 args <- commandArgs(trailingOnly=TRUE)
 
+## for testing
+#args <- c("rcp85 WRF MPI-ESM-LR elcentro",
+#          "obs/prec.obs.livneh.elcentro.nc",
+#          "save-test/prec.hist.MPI-ESM-LR.WRF.elcentro.nc",
+#          "save-test/prec.rcp85.MPI-ESM-LR.WRF.elcentro.nc",
+#          "fig-save/pfit/pfit.rcp85.WRF.MPI-ESM-LR.elcentro.png",
+#          "prec"          
+#          )
+
+
 label <- args[1]
         
 infiles <- c()
@@ -24,7 +34,15 @@ v <- "prec"
 ## color palette for bias-correction
 ocf <- c(obs="black", cur="blue", fut="red")
 
-    
+
+unzintensity <- function(y){
+  if(all(is.na(y))){ 0 } else { mean(y, na.rm=TRUE) }
+}
+
+unzfrequency <- function(y){
+  sum(!is.na(y))/length(y)*100
+}
+
 ## Precip frequency, intensity, total
 pfit <- function(ocfdata){
 
@@ -34,8 +52,8 @@ pfit <- function(ocfdata){
     result <- list()
     
     result$tot  <- sapply(zwet, function(x){sapply(x, mean)} )
-    result$int  <- sapply(wet, function(x){sapply(x, mean, na.rm=TRUE)} )
-    result$freq <- sapply(wet, function(x){sapply(x, function(y){sum(!is.na(y))/length(y)*100})})
+    result$int  <- sapply(wet, function(x){sapply(x, unzintensity)} )
+    result$freq <- sapply(wet, function(x){sapply(x, unzfrequency)})
     return(result)
 }
 
@@ -46,7 +64,7 @@ pfitplot <- function(ocfdata, fname, title=""){
     par(mfrow=c(3,1), oma=c(0,0,3,0))
 
     prec <- pfit(ocfdata)
-    yint <- max(unlist(prec$int))
+    yint <- max(unlist(prec$int), na.rm=TRUE)
     ytot <- max(unlist(prec$tot))
 
     x <- seq(1, 365, length=length(ocfdata$obs))
