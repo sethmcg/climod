@@ -10,15 +10,15 @@ suppressMessages(library(quantreg))
 
 args <- commandArgs(trailingOnly=TRUE)
 
-# For testing
-#args <- c("prec",
-#          "obs/prec.obs.livneh.elcentro.nc",
-#          "raw/prec.hist.HadGEM2-ES.RegCM4.elcentro.nc",
-#          "raw/prec.rcp85.HadGEM2-ES.RegCM4.elcentro.nc",
-#          "prec.test.cur.nc",
-#          "prec.test.fut.nc",
-#          "prec.test.Rdata"
-#          )
+# # For testing
+# args <- c("tmax",
+#           "obs/tmax.obs.livneh.ftlogan.nc",
+#           "raw/tmax.hist.HadGEM2-ES.RegCM4.ftlogan.nc",
+#           "raw/tmax.rcp85.HadGEM2-ES.RegCM4.ftlogan.nc",
+#           "tmax.test.cur.nc",
+#           "tmax.test.fut.nc",
+#           "tmax.test.Rdata"
+#           )
 
 
 varname <- args[1]
@@ -188,9 +188,23 @@ if(saveslice){
   dmaps <- dmaps[peaks]
   names(dmaps) <- names(peaks)
 
+  ## save times (as fractional year) for outer segmented data
+  
+  toutseg <- mapply(slice, time, cwin,
+                    MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE)
+  
+  ## convert time to year (
+  for(i in names(toutseg)){
+    toutseg[[i]] <- rapply(toutseg[[i]], how="replace",
+                           function(x){x/yearlength(time[[i]]@calendar)+1950})
+  }
+                         
+  tslice <- renest(toutseg)[peaks]; names(tslice) <- names(peaks)
+  
+  
   ## not needed:
-  ##  raw outer cont <- renest(oraw)[peaks]
-  ##  fix outer cont <- renest(ofix)[peaks]
+  ##  raw outer continuous <- renest(oraw)[peaks]
+  ##  fix outer continuous <- renest(ofix)[peaks]
 
   ## (inner segemented doesn't really make sense)
   
@@ -202,8 +216,11 @@ if(saveslice){
 
   innerdata <- list(raw=icraw, fix=icfix)
   outerdata <- list(raw=osraw, fix=osfix)
+
+  units <- indata$obs@units
   
-  save(peaks, jdays, dates, dmaps, innerdata, outerdata, file=savefile)
+  save(peaks, jdays, dates, dmaps, innerdata, outerdata, tslice, units,
+       file=savefile)
 }
 
 
