@@ -2,7 +2,7 @@
 library(devtools)
 #load_all("climod")
 load_all("~/climod")
-library(ncdf4)
+#library(ncdf4)
 
 ## Call as: Rscript --vanilla xfer.R label obs cur fut out varname slice
 
@@ -14,7 +14,6 @@ args <- commandArgs(trailingOnly=TRUE)
 #          "prec")
 
 label <- args[1]
-
 
 load(args[2])
 
