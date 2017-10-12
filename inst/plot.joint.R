@@ -13,16 +13,15 @@ cmap <- c(obs="black", cur="blue", fut="red")
 
 ## Call as: Rscript plot.joint.R label obs cur fut out
 
-#args <- commandArgs(trailingOnly=TRUE)
+args <- commandArgs(trailingOnly=TRUE)
 
- # for testing
- args <- c("rcp85 HadGEM2-ES WRF birmingham",
-           "obs/prec.obs.livneh.birmingham.nc",
-           "save-test/prec.hist.HadGEM2-ES.WRF.birmingham.nc",
-           "save-test/prec.rcp85.HadGEM2-ES.WRF.birmingham.nc",
-           "test.joint.png"
-           )
-
+# # for testing
+# args <- c("rcp85 HadGEM2-ES RegCM4 birmingham",
+#           "obs/prec.obs.livneh.birmingham.nc",
+#           "save-test/prec.hist.HadGEM2-ES.RegCM4.birmingham.nc",
+#           "save-test/prec.rcp85.HadGEM2-ES.RegCM4.birmingham.nc",
+#           "test.joint.png"
+#           )
 
 
 label <- args[1]
@@ -87,40 +86,37 @@ punits <- paste0("log(",punits,")")
 suppressWarnings(pdata <- rapply(pdata, log10, how="replace"))
 
 
-# ## drop non-finite values & sub-trace precip
-# ## This could work, but WRF current test-suite prec & temp have time coordinate errors
-# ptrace <- -4   # log scale, gridded
-# 
-# pgood <- rapply(pdata, how="replace", function(x){is.finite(x) & x > ptrace})
-# tgood <- rapply(tdata, how="replace", function(x){is.finite(x)})
-# isgood <- mapply(function(x,y){mapply(`&`, x, y, SIMPLIFY=FALSE)}, pgood, tgood, SIMPLIFY=FALSE)
-# 
-# # mapply(mapply(`[`, pgood, isgood))
-# # mapply(mapply(`[`, tgood, isgood))
-
-
-## combine, push p & t down to bottom of nesting
-jdata <- lapply(renest(list(temp=tdata, prec=pdata)), renest)
-
-
-
 ## drop non-finite values & sub-trace precip
 
-trace <- -7   # log scale, gridded
-                 ## maybe trace should be -4?  Livneh min = 0.00013293
-isgoodp <- function(p){is.finite(p) & p > trace}
-gdata <- lapply(jdata, function(x){lapply(x, function(y){lapply(y, `[`, isgoodp(y$prec))})})
+## This doesn't work with WRF because current test-suite prec & temp
+## have different length (plus other time coordinate issues)
 
-## For WRF, there are NA values in temp to strip out, also
-## Unfortunately, can't just re-use the above because it relies on prec being first
+## Needed: once times are aligned, trim based on max(min(time)) and
+## min(max(time)) to get common coverage periods.
 
-# ## strip non-finite values out of temp also
-# isgoodt <- function(t){is.finite(t)}
-# gdata <- lapply(jdata, function(x){lapply(x, function(y){lapply(y, `[`, isgoodt(y$temp))})})
 
-                                        # 
-## rearrange
-jsdata <- renest(gdata)
+ptrace <- -4   # log scale; threshold based on gridded obs range of values
+ 
+pgood <- rapply(pdata, how="replace", function(x){is.finite(x) & x > ptrace})
+tgood <- rapply(tdata, how="replace", function(x){is.finite(x)})
+isgood <- mapply(function(x,y){mapply(`&`, x, y, SIMPLIFY=FALSE)}, pgood, tgood, SIMPLIFY=FALSE)
+
+## Recursive subset on identically structured nested lists
+
+rsub <- function(x,y){
+  if(is.atomic(x) && is.atomic(y)){
+    x[y]
+ } else {
+   Map(rsub, x, y)
+ }
+}
+
+psub <- rsub(pdata, isgood)
+tsub <- rsub(tdata, isgood)
+
+
+## combine, push p & t down to bottom of nesting & pull seas up to top
+jsdata <- renest(lapply(renest(list(temp=tsub, prec=psub)), renest))
 names(jsdata) <- seas
 
 
