@@ -11,6 +11,16 @@ library(mgcv)
 seas <- c("DJF","MAM","JJA","SON")
 cmap <- c(obs="black", cur="blue", fut="red")
 
+## Recursive subset x[y] on identically structured nested lists
+rsub <- function(x,y){
+  if(is.atomic(x) && is.atomic(y)){
+    copyatts(x, x[y])
+ } else {
+   Map(rsub, x, y)
+ }
+}
+
+
 ## Call as: Rscript plot.joint.R label obs cur fut out
 
 args <- commandArgs(trailingOnly=TRUE)
@@ -25,60 +35,140 @@ args <- commandArgs(trailingOnly=TRUE)
 
 
 label <- args[1]
-        
-precfiles <- c()
-precfiles["obs"] <- args[2]
-precfiles["cur"] <- args[3]
-precfiles["fut"] <- args[4]
+
+infiles <- list()
+infiles$prec <- c(obs=args[2], cur=args[3], fut=args[4])
+infiles$tmax <- gsub("prec", "tmax", infiles$prec)
+infiles$tmin <- gsub("prec", "tmin", infiles$prec)
+
+# precfiles <- c()
+# precfiles["obs"] <- args[2]
+# precfiles["cur"] <- args[3]
+# precfiles["fut"] <- args[4]
+# 
+# tmaxfiles <- gsub("prec","tmax",precfiles)
+# tminfiles <- gsub("prec","tmin",precfiles)
+# infiles <- c(precfiles, tmaxfiles, tminfiles)
+# names(infiles) <- outer(names(precfiles),c("prec","tmax","tmin"),paste0)
 
 outfile <- args[5]
 
-tmaxfiles <- gsub("prec","tmax",precfiles)
-tminfiles <- gsub("prec","tmin",precfiles)
+#nc <- lapply(infiles, nc_ingest)
 
-infiles <- c(precfiles, tmaxfiles, tminfiles)
-names(infiles) <- outer(names(precfiles),c("prec","tmax","tmin"),paste0)
+nc <- lapply(infiles, function(x){lapply(x, nc_ingest)})
 
-nc <- lapply(infiles, nc_ingest)
+
 
 ## extract variables of interest from the netcdf objects
-v <- rep(c("prec","tmax","tmin"), each=3)
-data <- mapply(`[[`, nc, v, SIMPLIFY=FALSE)
+#v <- rep(c("prec","tmax","tmin"), each=3)
+#data <- mapply(`[[`, nc, v, SIMPLIFY=FALSE)
 
-punits <- data$obsprec@units
-tunits <- data$obstmax@units
-    
-time <- lapply(nc,"[[","time")
-time <- lapply(time, alignepochs, "days since 1949-12-01")
+data <- list()
+for(v in names(nc)){
+  data[[v]] <- lapply(nc[[v]], `[[`, v)
+}
+
+
+#punits <- data$obsprec@units
+#tunits <- data$obstmax@units
+
+punits <- data$prec$obs@units
+tunits <- data$tmax$obs@units
+
+
+#time <- lapply(nc,"[[","time")
+
+time <- list()
+for(v in names(nc)){
+  time[[v]] <- lapply(nc[[v]], `[[`, "time")
+}
+
+#time <- lapply(time, alignepochs, "days since 1949-12-01")
+
+atime <- rapply(time, alignepochs, epoch="days since 1949-12-01", how="replace")
+
 
 ## Aligning on 12-01 instead of 01-01 makes the cslices be
 ## DJF/MAM/JJA/SON instead of JFM/AMJ/JAS/OND.
 
 
+## trim data to common coverage periods
+
+rtime <- renest(atime)
+rdata <- renest(data)
+
+####  The basic problem that I am in the middle of fixing here: we
+####  need a 1:1 mapping between precip & temp.  So for obs/cur/fut,
+####  the time coordinates of the three variables need to match.  It
+####  may commonly be the case that the endpoints will not match, in
+####  which case we can trim things to the minimal coverage period.
+####  But if the coordinates are off (e.g., precip is on 0.5, while
+####  temp is on 0, as is the case with the WRF data currently), then
+####  I should be fixing it in the data, rather than hackily fixing it
+####  here.  So this next little bit is a hack while I wait for the
+####  data to be fixed properly.
+
+htime <- rtime
+for(p in names(htime)){
+  offset <- htime[[p]]$prec[1] %% 1
+  for(v in c("tmax","tmin")){
+    adjust <- offset - htime[[p]][[v]][1] %% 1
+    if(adjust != 0){ warning(paste("Manually adjusting", p, v, "time to match prec time!"))}
+    htime[[p]][[v]] <- htime[[p]][[v]] + adjust
+  }
+}
+
+
+## Data could be missing in the middle (WRF), so we use %in% rather
+## than just checking the beginning and ending.
+
+matching <- lapply(htime, function(x){
+  list(prec = ((x$prec %in% x$tmax) & (x$prec %in% x$tmin)),
+       tmax = ((x$tmax %in% x$tmin) & (x$tmax %in% x$prec)),
+       tmin = ((x$tmin %in% x$prec) & (x$tmin %in% x$tmax)))})
+
+
+ttime <- rsub(htime, matching)
+ddata <- rsub(rdata, matching)
+
+
+
 ## calculate tmrg = T_midrange = (Tmax + Tmin)/2
-for(i in c("obs","cur","fut")){
-  ti <- paste0(i, c("tmin","tmax","tmrg"))  
-  stopifnot(identical(time[[ti[1]]], time[[ti[2]]]))
-  time[[ti[3]]] <- time[[ti[1]]]
-  data[[ti[3]]] <- (data[[ti[1]]] + data[[ti[2]]])/2
+for(p in names(ddata)){
+  stopifnot(identical(ttime[[p]]$tmax, ttime[[p]]$tmin))
+#  ttime[[p]]$tmrg <- ttime[[p]]$tmax
+  ddata[[p]]$tmrg <- (ddata[[p]]$tmax + ddata[[p]]$tmin)/2
 }
 
 
 
+#for(i in c("obs","cur","fut")){
+#  ti <- paste0(i, c("tmin","tmax","tmrg"))  
+#  stopifnot(identical(time[[ti[1]]], time[[ti[2]]]))
+# time[[ti[3]]] <- time[[ti[1]]]
+#  data[[ti[3]]] <- (data[[ti[1]]] + data[[ti[2]]])/2
+#}
+
+
+
 ## generate seasonal climatology window index arrays
-cwin <- lapply(time, cslice, ratio=1, num=4, split=FALSE)
+#cwin <- lapply(time, cslice, ratio=1, num=4, split=FALSE)
+cwin <- lapply(renest(ttime)$prec, cslice, ratio=1, num=4, split=FALSE)
 
 ## slice data
-sdata <- mapply(slice, data, cwin, SIMPLIFY=FALSE)
+#sdata <- mapply(slice, data, cwin, SIMPLIFY=FALSE)
+sdata <- mapply(function(d,s){lapply(d, slice, s)}, ddata, cwin, SIMPLIFY=FALSE)
 
 
 ## subset
-pdata <- sdata[grep("prec", names(sdata))]
-tdata <- sdata[grep("tmrg", names(sdata))]
+#pdata <- sdata[grep("prec", names(sdata))]
+#tdata <- sdata[grep("tmrg", names(sdata))]
+#
+#names(pdata) <- names(cmap)
+#names(tdata) <- names(cmap)
 
-names(pdata) <- names(cmap)
-names(tdata) <- names(cmap)
-
+pdata <- lapply(sdata, `[[`, "prec")
+tdata <- lapply(sdata, `[[`, "tmrg")
 
 
 ## Log precip
@@ -101,15 +191,6 @@ pgood <- rapply(pdata, how="replace", function(x){is.finite(x) & x > ptrace})
 tgood <- rapply(tdata, how="replace", function(x){is.finite(x)})
 isgood <- mapply(function(x,y){mapply(`&`, x, y, SIMPLIFY=FALSE)}, pgood, tgood, SIMPLIFY=FALSE)
 
-## Recursive subset on identically structured nested lists
-
-rsub <- function(x,y){
-  if(is.atomic(x) && is.atomic(y)){
-    x[y]
- } else {
-   Map(rsub, x, y)
- }
-}
 
 psub <- rsub(pdata, isgood)
 tsub <- rsub(tdata, isgood)
