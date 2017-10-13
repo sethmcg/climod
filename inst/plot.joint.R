@@ -25,15 +25,6 @@ rsub <- function(x,y){
 
 args <- commandArgs(trailingOnly=TRUE)
 
-# # for testing
-# args <- c("rcp85 HadGEM2-ES RegCM4 birmingham",
-#           "obs/prec.obs.livneh.birmingham.nc",
-#           "save-test/prec.hist.HadGEM2-ES.RegCM4.birmingham.nc",
-#           "save-test/prec.rcp85.HadGEM2-ES.RegCM4.birmingham.nc",
-#           "test.joint.png"
-#           )
-
-
 label <- args[1]
 
 infiles <- list()
@@ -41,79 +32,57 @@ infiles$prec <- c(obs=args[2], cur=args[3], fut=args[4])
 infiles$tmax <- gsub("prec", "tmax", infiles$prec)
 infiles$tmin <- gsub("prec", "tmin", infiles$prec)
 
-# precfiles <- c()
-# precfiles["obs"] <- args[2]
-# precfiles["cur"] <- args[3]
-# precfiles["fut"] <- args[4]
-# 
-# tmaxfiles <- gsub("prec","tmax",precfiles)
-# tminfiles <- gsub("prec","tmin",precfiles)
-# infiles <- c(precfiles, tmaxfiles, tminfiles)
-# names(infiles) <- outer(names(precfiles),c("prec","tmax","tmin"),paste0)
-
 outfile <- args[5]
-
-#nc <- lapply(infiles, nc_ingest)
 
 nc <- lapply(infiles, function(x){lapply(x, nc_ingest)})
 
 
 
 ## extract variables of interest from the netcdf objects
-#v <- rep(c("prec","tmax","tmin"), each=3)
-#data <- mapply(`[[`, nc, v, SIMPLIFY=FALSE)
-
 data <- list()
 for(v in names(nc)){
   data[[v]] <- lapply(nc[[v]], `[[`, v)
 }
 
 
-#punits <- data$obsprec@units
-#tunits <- data$obstmax@units
-
 punits <- data$prec$obs@units
 tunits <- data$tmax$obs@units
 
-
-#time <- lapply(nc,"[[","time")
 
 time <- list()
 for(v in names(nc)){
   time[[v]] <- lapply(nc[[v]], `[[`, "time")
 }
 
-#time <- lapply(time, alignepochs, "days since 1949-12-01")
 
 atime <- rapply(time, alignepochs, epoch="days since 1949-12-01", how="replace")
-
-
 ## Aligning on 12-01 instead of 01-01 makes the cslices be
 ## DJF/MAM/JJA/SON instead of JFM/AMJ/JAS/OND.
 
 
-## trim data to common coverage periods
+## Subset data to common times across variables
 
 rtime <- renest(atime)
 rdata <- renest(data)
 
-####  The basic problem that I am in the middle of fixing here: we
-####  need a 1:1 mapping between precip & temp.  So for obs/cur/fut,
-####  the time coordinates of the three variables need to match.  It
-####  may commonly be the case that the endpoints will not match, in
-####  which case we can trim things to the minimal coverage period.
-####  But if the coordinates are off (e.g., precip is on 0.5, while
-####  temp is on 0, as is the case with the WRF data currently), then
-####  I should be fixing it in the data, rather than hackily fixing it
-####  here.  So this next little bit is a hack while I wait for the
-####  data to be fixed properly.
+##  We need a 1:1 mapping between precip & temp.  The later stages
+##  deal with differences in start and end times, missing data int he
+##  middle, etc.  However, it depends on the time corodinates of the
+##  three variables being otherwise the same.  The code chunk below
+##  deals with the special case of one variable having its coordinates
+##  at a different point in the interval (e.g., precip is at 12:00
+##  while temp is at 00:00).  The right place to fix this is in the
+##  datafiles, but that's unfinished while this code is being
+##  developed, so we fix it manually and emit a warning about it.
 
 htime <- rtime
 for(p in names(htime)){
   offset <- htime[[p]]$prec[1] %% 1
   for(v in c("tmax","tmin")){
     adjust <- offset - htime[[p]][[v]][1] %% 1
-    if(adjust != 0){ warning(paste("Manually adjusting", p, v, "time to match prec time!"))}
+    if(adjust != 0){
+      warning(paste("Manually adjusting", p, v,
+                    "time to match prec time!"))}
     htime[[p]][[v]] <- htime[[p]][[v]] + adjust
   }
 }
@@ -136,37 +105,19 @@ ddata <- rsub(rdata, matching)
 ## calculate tmrg = T_midrange = (Tmax + Tmin)/2
 for(p in names(ddata)){
   stopifnot(identical(ttime[[p]]$tmax, ttime[[p]]$tmin))
-#  ttime[[p]]$tmrg <- ttime[[p]]$tmax
   ddata[[p]]$tmrg <- (ddata[[p]]$tmax + ddata[[p]]$tmin)/2
 }
 
 
-
-#for(i in c("obs","cur","fut")){
-#  ti <- paste0(i, c("tmin","tmax","tmrg"))  
-#  stopifnot(identical(time[[ti[1]]], time[[ti[2]]]))
-# time[[ti[3]]] <- time[[ti[1]]]
-#  data[[ti[3]]] <- (data[[ti[1]]] + data[[ti[2]]])/2
-#}
-
-
-
 ## generate seasonal climatology window index arrays
-#cwin <- lapply(time, cslice, ratio=1, num=4, split=FALSE)
 cwin <- lapply(renest(ttime)$prec, cslice, ratio=1, num=4, split=FALSE)
 
+
 ## slice data
-#sdata <- mapply(slice, data, cwin, SIMPLIFY=FALSE)
 sdata <- mapply(function(d,s){lapply(d, slice, s)}, ddata, cwin, SIMPLIFY=FALSE)
 
 
 ## subset
-#pdata <- sdata[grep("prec", names(sdata))]
-#tdata <- sdata[grep("tmrg", names(sdata))]
-#
-#names(pdata) <- names(cmap)
-#names(tdata) <- names(cmap)
-
 pdata <- lapply(sdata, `[[`, "prec")
 tdata <- lapply(sdata, `[[`, "tmrg")
 
@@ -177,13 +128,6 @@ suppressWarnings(pdata <- rapply(pdata, log10, how="replace"))
 
 
 ## drop non-finite values & sub-trace precip
-
-## This doesn't work with WRF because current test-suite prec & temp
-## have different length (plus other time coordinate issues)
-
-## Needed: once times are aligned, trim based on max(min(time)) and
-## min(max(time)) to get common coverage periods.
-
 
 ptrace <- -4   # log scale; threshold based on gridded obs range of values
  
@@ -237,7 +181,9 @@ for (s in seas){
     ## add mode point
     modept <- which(gf$z == max(sz), arr.ind=TRUE)
     points(gf$x[modept[1]], gf$y[modept[2]], pch=19, col=cmap[i], cex=1.5)
-  
+
+    ## TODO: change mode point to something like 2D Tukey median
+    
   
     ## plot individual points outside 90% contour
     ## sp::point.in.polygon has nicer syntax, but crashes R
