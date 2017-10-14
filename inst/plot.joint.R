@@ -4,9 +4,8 @@ library(devtools)
 load_all("~/climod")
 library(ncdf4)
 library(MASS)
-library(mgcv)
-#library(RColorBrewer)
-#library(colorspace)
+suppressMessages(library(mgcv))
+
 
 seas <- c("DJF","MAM","JJA","SON")
 cmap <- c(obs="black", cur="blue", fut="red")
@@ -21,9 +20,23 @@ rsub <- function(x,y){
 }
 
 
-## Call as: Rscript plot.joint.R label obs cur fut out
+## Call as: Rscript plot.joint.R label obs cur fut png var txt
 
-args <- commandArgs(trailingOnly=TRUE)
+## provide input files for prec; tmax & tmin are assumed analogous
+## png = name of output file for plotted figure
+## txt = name of output file for plain-text table of metrics
+
+args <- c("rcp85 HadGEM2-ES WRF birmingham",
+          "obs/prec.obs.livneh.birmingham.nc",
+          "save-test/prec.hist.HadGEM2-ES.WRF.birmingham.nc",
+          "save-test/prec.rcp85.HadGEM2-ES.WRF.birmingham.nc",
+          "test.joint.png",
+          "prec",
+          "test.joint.txt"
+          )
+
+## comment out this line for testing
+#args <- commandArgs(trailingOnly=TRUE)
 
 label <- args[1]
 
@@ -33,6 +46,7 @@ infiles$tmax <- gsub("prec", "tmax", infiles$prec)
 infiles$tmin <- gsub("prec", "tmin", infiles$prec)
 
 outfile <- args[5]
+txtfile <- args[7]
 
 nc <- lapply(infiles, function(x){lapply(x, nc_ingest)})
 
@@ -145,6 +159,36 @@ jsdata <- renest(lapply(renest(list(temp=tsub, prec=psub)), renest))
 names(jsdata) <- seas
 
 
+## Function: gets polygons for contours of field as 2-column array
+## contourLines
+
+conpolyarr <- function(g2d, contourlevel){
+  
+  pout <- contourLines(x=g2d$x, y=g2d$y, z=g2d$z, levels=contourlevel)
+  
+  ## Need to convert lists to 2-column arrays.  contourLines returns a
+  ## list because there could be multiple polygons.  If there's more
+  ## than 1 polygon, we need to merge them into one big array and
+  ## stick rows of NA between them.
+  
+  la <- lapply(pout, function(p){cbind(p$x, p$y)})
+  
+  a <- la[[1]]
+  if(length(la) > 1){
+    for(i in 2:length(la)){
+      a <- rbind(a, NA, la[[i]])
+    }
+  }
+  return(a)
+}
+
+
+## Empty metrics dataframe
+
+metrics <- data.frame(infile = "dummy", period="seas", analysis="joint",
+                      ktau=0, q50over=0, modeP=0, modeT=0,
+                      stringsAsFactors=FALSE)
+
 ## plotting
 
 png(outfile, units="in", res=120, width=10, height=7)
@@ -165,7 +209,8 @@ for (s in seas){
   
     ## gridded 2D density estimate
     gf <- kde2d(d$prec, d$temp, lims=par("usr"))
-  
+
+    
     ## find contour levels containing 95% and 50% of total 2D-PDF AUC
     ## (Ordering outer to inner makes plotting outliers easier.)  
     plev <- c(0.95, 0.5)
@@ -173,42 +218,53 @@ for (s in seas){
     sz <- sort(gf$z)
     auc <- sum(sz)
     clev <- sz[findInterval((1-plev)*auc, cumsum(sz))]
-  
+
+    
     ## plot contours
     contour(gf, levels=clev, drawlabels=FALSE,
           lwd=seq(length(plev)), col=cmap[i], add=TRUE)
+
     
     ## add mode point
-    modept <- which(gf$z == max(sz), arr.ind=TRUE)
-    points(gf$x[modept[1]], gf$y[modept[2]], pch=19, col=cmap[i], cex=1.5)
-
+    imode <- which(gf$z == max(sz), arr.ind=TRUE)
+    modept <- list(x=gf$x[imode[1]], y=gf$y[imode[2]])
+    points(modept$x, modept$y, pch=19, col=cmap[i], cex=1.5)
     ## TODO: change mode point to something like 2D Tukey median
     
   
     ## plot individual points outside 90% contour
     ## sp::point.in.polygon has nicer syntax, but crashes R
-  
-    pout <- contourLines(x=gf$x, y=gf$y, z=gf$z, levels=clev[1])
-  
-    ## Need to convert lists to 2-column arrays.  contourLines returns a
-    ## list because there could be multiple polygons.  If there's more
-    ## than 1 polygon, we need to merge them into one big array and
-    ## stick rows of NA between them.
-  
-    la90 <- lapply(pout, function(p){cbind(p$x, p$y)})
-  
-    a90 <- la90[[1]]
-    if(length(la90) > 1){
-      for(i in 2:length(la90)){
-        a90 <- rbind(a90, NA, la90[[i]])
-      }
-    }
+
+    a90 <- conpolyarr(gf, clev[1])
       
     outpts <- !in.out(a90, cbind(d$prec, d$temp))
     points(d$prec[outpts], d$temp[outpts], col=cmap[i], pch=19, cex=0.2)
-  
-  }
 
+    
+    
+    ## Calculate metrics
+
+    ## correlation between P & T  (Kendall's Tau)
+    ktau <- cor(d$prec, d$temp, method="kendall")
+
+    ## % overlap between obs & mod q50 contours
+    if (i == "obs"){
+      ## As long as obs is first, this will carry over to later loops      
+      grid <- as.matrix(expand.grid(gf$x, gf$y, KEEP.OUT.ATTRS=FALSE))
+      oqa50 <- conpolyarr(gf, clev[2])      
+      oq50io <- in.out(oqa50, grid)
+    }
+
+    qa50 <- conpolyarr(gf, clev[2])
+    q50io <- in.out(qa50, grid)
+    q50over <- sum(q50io & oq50io) / sum(q50io)
+
+    ## Add to metrics df
+    metrics <- rbind(metrics,
+                     list(infiles$prec[i], s, "joint",
+                          ktau, q50over,
+                          modept$x, modept$y))
+  }
 }
 
 
@@ -229,3 +285,10 @@ legend(0.5, 0.5, ncol=2, bty="n", seg.len=1, x.intersp=0.5, xjust=0.5, yjust=0.6
  
 dev.off()
 
+
+## write out metrics
+
+metrics <- metrics[-1,]
+
+write.table(format(metrics, trim=TRUE, digits=3),
+            file=txtfile, quote=FALSE, sep="\t", row.names=FALSE)
