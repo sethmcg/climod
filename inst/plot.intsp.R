@@ -4,19 +4,23 @@ library(devtools)
 load_all("~/climod")
 library(ncdf4)
 
-## Call as: Rscript --vanilla intsp.R label obs cur fut out
+## Call as: Rscript plot.intsp.R label obs cur fut png var txt
 
+## png = name of output file for plotted figure
+## txt = name of output file for plain-text table of metrics
+
+# for testing
+args <- c("rcp85 HadGEM2-ES RegCM4 birmingham",
+          "obs/prec.obs.livneh.birmingham.nc",
+          "save-test/prec.hist.HadGEM2-ES.RegCM4.birmingham.nc",
+          "save-test/prec.rcp85.HadGEM2-ES.RegCM4.birmingham.nc",
+          "test.intsp.png",
+          "prec",
+          "test.intsp.txt"
+          )
+
+## comment out this line for testing
 args <- commandArgs(trailingOnly=TRUE)
-
-# # for testing
-# args <- c("rcp85 HadGEM2-ES RegCM4 birmingham",
-#           "obs/prec.obs.livneh.birmingham.nc",
-#           "save-test/prec.hist.HadGEM2-ES.RegCM4.birmingham.nc",
-#           "save-test/prec.rcp85.HadGEM2-ES.RegCM4.birmingham.nc",
-#           "test.intsp.png",
-#           "prec"          
-#           )
-
 
 label <- args[1]
         
@@ -27,8 +31,9 @@ infiles["fut"] <- args[4]
 
 outfile <- args[5]
 
-
 v <- args[6]
+
+txtfile <- args[7]
 
 
 ## color palette
@@ -77,6 +82,14 @@ PB <- function(x){
 
 
 
+## Empty metrics dataframe
+
+metrics <- data.frame(infile = "dummy", period="seas", analysis="intsp",
+                      pislope=0,
+                      stringsAsFactors=FALSE)
+
+## plotting
+
 png(outfile, units="in", res=120, width=7, height=7)
 
 par(mfrow=c(2,2), oma=c(0,0,3,0), mgp=c(2,1,0), mar=c(4,3.5,2.5,1))
@@ -102,14 +115,25 @@ for(s in names(zdata)){
 
   for(f in names(fits)){
     abline(fits[[f]], col=cmap[f])
+    metrics <- rbind(metrics, list(infiles[f], s, "intsp", coef(fits[[f]])[2]))
   }
   
   abline(v=quantile(p$obs,0.5),col="gray")
   
   legend("topright", names(cmap), col=cmap, pch=1)
+
+  
   
 }
 
 mtext(label, line=1, outer=TRUE)
     
 dev.off()
+
+
+## write out metrics
+
+metrics <- metrics[-1,]
+
+write.table(format(metrics, trim=TRUE, digits=3),
+            file=txtfile, quote=FALSE, sep="\t", row.names=FALSE)

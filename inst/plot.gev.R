@@ -3,21 +3,25 @@ library(devtools)
 #load_all("climod")
 load_all("~/climod")
 library(ncdf4)
-library(extRemes)
+suppressMessages(library(extRemes))
 
 
-## Call as: Rscript --vanilla intsp.R label obs cur fut out
+## Call as: Rscript plot.gev.R label obs cur fut png var txt
 
+## png = name of output file for plotted figure
+## txt = name of output file for plain-text table of metrics
+
+args <- c("rcp85 HadGEM2-ES RegCM4 birmingham",
+          "obs/prec.obs.livneh.birmingham.nc",
+          "save-test/prec.hist.HadGEM2-ES.RegCM4.birmingham.nc",
+          "save-test/prec.rcp85.HadGEM2-ES.RegCM4.birmingham.nc",
+          "test.gev.png",
+          "prec",
+          "test.gev.txt"
+          )
+
+## Comment out this line for testing
 args <- commandArgs(trailingOnly=TRUE)
-
-# # for testing
-# args <- c("rcp85 HadGEM2-ES RegCM4 birmingham",
-#           "obs/prec.obs.livneh.birmingham.nc",
-#           "save-test/prec.hist.HadGEM2-ES.RegCM4.birmingham.nc",
-#           "save-test/prec.rcp85.HadGEM2-ES.RegCM4.birmingham.nc",
-#           "test.intsp.png",
-#           "prec"          
-#           )
 
 
 label <- args[1]
@@ -29,9 +33,9 @@ infiles["fut"] <- args[4]
 
 outfile <- args[5]
 
-
 v <- args[6]
 
+txtfile <- args[7]
 
 ## color palette
 cmap <- c(obs="black", cur="blue", fut="red")
@@ -64,7 +68,9 @@ nsfits <- lapply(annmax, function(x){
   fevd(data=x, x=prec, annmax, units=units,
        location.fun=~year, scale.fun=~year)})
 
-nserlev <- lapply(lapply(nsfits, erlevd, period=c(50, 100, 200)), t)
+
+nsper <- c(50,100,200)
+nserlev <- lapply(lapply(nsfits, erlevd, period=nsper), t)
 
 
 png(outfile, units="in", res=120, width=7, height=7)
@@ -89,3 +95,37 @@ for(i in names(yyear)){
 mtext(label, line=1, outer=TRUE)
     
 dev.off()
+
+
+
+## Calculate
+
+metrics <- data.frame(infile = "dummy", period="Xyr", analysis="gev",
+                      rlevlo=0, rlevmid=0, rlevhi=0,
+                      
+                      stringsAsFactors=FALSE)
+
+rps <- c(5, 10, 20, 50, 100)
+
+for(p in names(fits)){
+
+  m1 <- data.frame(infile=infiles[p], 
+                   period=paste0(rps, "yr"),
+                   analysis="gev",
+                   row.names=NULL)
+  
+  m2 <- as.data.frame(unclass(ci(fits[[p]], return.period=rps)))
+  rownames(m2) <- NULL
+  colnames(m2) <- c("rlevlo", "rlevmid", "rlevhi")
+
+  metrics <- rbind(metrics, cbind(m1, m2))
+}
+
+
+
+## write out metrics
+
+metrics <- metrics[-1,]
+
+write.table(format(metrics, trim=TRUE, digits=3),
+            file=txtfile, quote=FALSE, sep="\t", row.names=FALSE)

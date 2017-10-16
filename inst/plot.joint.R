@@ -36,7 +36,7 @@ args <- c("rcp85 HadGEM2-ES WRF birmingham",
           )
 
 ## comment out this line for testing
-#args <- commandArgs(trailingOnly=TRUE)
+args <- commandArgs(trailingOnly=TRUE)
 
 label <- args[1]
 
