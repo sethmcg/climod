@@ -4,8 +4,22 @@ library(devtools)
 load_all("~/climod")
 library(ncdf4)
 
-## Call as: Rscript --vanilla mpdf.R label obs cur fut out varname
+## Call as: Rscript plot.intsp.R label obs cur fut png var txt
 
+## png = name of output file for plotted figure
+## txt = name of output file for plain-text table of metrics
+
+# for testing
+args <- c("rcp85 HadGEM2-ES RegCM4 birmingham",
+          "obs/prec.obs.livneh.birmingham.nc",
+          "save-test/prec.hist.HadGEM2-ES.RegCM4.birmingham.nc",
+          "save-test/prec.rcp85.HadGEM2-ES.RegCM4.birmingham.nc",
+          "test.mpdf.png",
+          "prec",
+          "test.mpdf.txt"
+          )
+
+## comment out this line for testing
 args <- commandArgs(trailingOnly=TRUE)
 
 label <- args[1]
@@ -16,17 +30,10 @@ infiles["cur"] <- args[3]
 infiles["fut"] <- args[4]
 
 outfile <- args[5]
+
 v <- args[6]
 
-# label <- "tmax rcp85 GFDL-ESM2M RegCM4 NAM-22i kddm-livneh boulder 2036-2065"
-# 
-# infiles <- c()
-# infiles["obs"] <- "obs/tmax.livneh.boulder.nc"
-# infiles["cur"] <- "ts/tmax.hist.HadGEM2-ES.WRF.day.NAM-22i.kddm-livneh.boulder.nc"
-# infiles["fut"] <- "ts/fut/tmax.rcp85.HadGEM2-ES.WRF.day.NAM-22i.kddm-livneh.boulder.2036-2065.nc"
-# 
-# outfile <- "test.png"
-# v <- "tmax"
+txtfile <- args[7]
 
 
 nc <- lapply(infiles, nc_ingest)
@@ -77,14 +84,69 @@ par(mfrow=c(3,4), oma=c(0,0,3,0), mar=c(2.5,1.5,3,1.5)+0.1)
 mdata <- renest(cdata)
 names(mdata) <- month.abb
 
+
+skill <- list(obs=list(pdf=c(), tail=c()), cur=list(), fut=list())
+for(p in names(ocf)){
+  skill[[p]]$pdf  <- mapply( pdfskill, cdata$obs, cdata[[p]])
+  skill[[p]]$tail <- mapply(tailskill, cdata$obs, cdata[[p]])
+}
+skill <- rapply(skill, how="replace", function(x){names(x)<- month.abb;x})
+skill <- rapply(skill, how="replace", format, trim=TRUE, digits=3)
+
+
 for(m in month.abb){
   mplot(lapply(mdata[[m]], akde, min.x=min(xr), max.x=max(xr)),
-        yaxt="n", col=ocf, type='l', lty=1, main=m, xlab=units, ylab="")  
+        yaxt="n", col=ocf, type='l', lty=1, main=m, xlab=units, ylab="")
+
+  if(v=="prec" || m %in% month.abb[4:9]){
+    lloc <- "topleft"
+    tw <-4
+    xi <- 0
+  } else {
+    lloc <- "topright"
+    tw <- 8
+    xi <- -1
+  }
+  
+  legend(lloc, title="skill scores", text.width=tw,
+         ncol=2, bty="n", seg.len=0, x.intersp=xi,
+         legend=c("pdf:", "", "tail:", "",
+           skill$cur$pdf[m], skill$fut$pdf[m],
+           skill$cur$tail[m], skill$fut$tail[m]),
+         text.col=ocf[c(1,1,1,1,2,3,2,3)])
 }
 
-lloc <- ifelse(v=="prec", "topleft", "topright")
-legend(lloc, names(ocf), col=ocf, lty=1, seg.len=1)
-
 mtext(paste(label, "PDFs (",units,")"), line=1, outer=TRUE)
-    
+
+
+## upper-margin legend outside plots
+
+par(fig=c(0,1,0,1), oma=c(0,0,1,1), mar=c(0,0,0,0), new=TRUE)
+plot(0, 0, type="n", bty="n", xaxt="n", yaxt="n", ann=FALSE)
+legend("topright", names(ocf), col=ocf, lty=1, seg.len=1, horiz=TRUE)
+
+
 dev.off()
+
+
+## metrics
+
+metrics <- data.frame(infile="dummy", period="mon", analysis="mpdf",
+                      pdfsk = 0, tailsk = 0, stringsAsFactors=FALSE)
+
+for(p in names(infiles)){
+  metrics <- rbind(metrics, data.frame(infile = c(infiles[p]),
+                                 period = month.abb,
+                                 analysis = "mpdf",
+                                 pdfsk = skill[[p]]$pdf,
+                                 tailsk = skill[[p]]$tail,
+                                 row.names=NULL))
+}
+
+
+## write out metrics
+
+metrics <- metrics[-1,]
+
+write.table(metrics,
+            file=txtfile, quote=FALSE, sep="\t", row.names=FALSE)
