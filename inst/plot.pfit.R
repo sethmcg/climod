@@ -4,18 +4,23 @@ library(devtools)
 load_all("~/climod")
 library(ncdf4)
 
-## Call as: Rscript --vanilla pfit.R label obs cur fut out
+## Call as: Rscript plot.pfit.R label obs cur fut png var txt
 
+## png = name of output file for plotted figure
+## txt = name of output file for plain-text table of metrics
+
+# for testing
+args <- c("rcp85 HadGEM2-ES RegCM4 birmingham",
+          "obs/prec.obs.livneh.birmingham.nc",
+          "save-test/prec.hist.HadGEM2-ES.RegCM4.birmingham.nc",
+          "save-test/prec.rcp85.HadGEM2-ES.RegCM4.birmingham.nc",
+          "test.pfit.png",
+          "prec",
+          "test.pfit.txt"
+          )
+
+## comment out this line for testing
 args <- commandArgs(trailingOnly=TRUE)
-
-## for testing
-#args <- c("rcp85 WRF MPI-ESM-LR elcentro",
-#          "obs/prec.obs.livneh.elcentro.nc",
-#          "save-test/prec.hist.MPI-ESM-LR.WRF.elcentro.nc",
-#          "save-test/prec.rcp85.MPI-ESM-LR.WRF.elcentro.nc",
-#          "fig-save/pfit/pfit.rcp85.WRF.MPI-ESM-LR.elcentro.png",
-#          "prec"          
-#          )
 
 
 label <- args[1]
@@ -27,8 +32,10 @@ infiles["fut"] <- args[4]
 
 outfile <- args[5]
 
+v <- args[6]
+stopifnot(v == "prec")
 
-v <- "prec"
+txtfile <- args[7]
 
 
 ## color palette for bias-correction
@@ -54,20 +61,20 @@ pfit <- function(ocfdata){
     result$tot  <- sapply(zwet, function(x){sapply(x, mean)} )
     result$int  <- sapply(wet, function(x){sapply(x, unzintensity)} )
     result$freq <- sapply(wet, function(x){sapply(x, unzfrequency)})
+    class(result) <- "pfit"
     return(result)
 }
 
 
 ## pfit plotting
-pfitplot <- function(ocfdata, fname, title=""){
+plot.pfit <- function(prec, fname, title=""){
     png(fname, units="in", res=120, width=7, height=7)
     par(mfrow=c(3,1), oma=c(0,0,3,0))
 
-    prec <- pfit(ocfdata)
     yint <- max(unlist(prec$int), na.rm=TRUE)
     ytot <- max(unlist(prec$tot))
 
-    x <- seq(1, 365, length=length(ocfdata$obs))
+    x <- seq(1, 365, length=length(prec$tot[,"obs"]))
 
     matplot(x, prec$freq, type="l", col=ocf, lty=1, ylim=c(0,100),
             xlab="day of year", ylab="% wet", main="mean precip frequency")
@@ -114,5 +121,51 @@ zdata <- lapply(data, unzero)
 pdata <- mapply(slice, zdata, dwin, MoreArgs=list(outer=TRUE),
                 SIMPLIFY=FALSE)
 
-pfitplot(pdata, outfile, label)
+prec <- pfit(pdata)
 
+plot(prec, outfile, label)
+
+
+
+## metrics
+
+## omit RMSE
+## rmse <- function(x){ sqrt(mean(x^2)) }
+
+## Omit MASE
+## mase <- function(x){ mean(abs(x)) / mean(abs(diff(x))) }
+
+
+mprec <- lapply(prec, function(x){as.list(as.data.frame(x))})
+
+mcor <- lapply(mprec, function(x){lapply(x, function(y){cor(y, x$obs)})})
+mcor <- lapply(renest(mcor), unlist)
+mmad <- lapply(mprec, function(x){lapply(x, function(y){mad(y-x$obs, center=0)})})
+mmad <- lapply(renest(mmad), unlist)
+
+
+metrics <- data.frame(infile="dummy", period="ann", analysis="pfit",
+                      freqcor=0, intcor=0, totcor=0,
+                      freqmad=0, intmad=0, totmad=0,
+                      stringsAsFactors=FALSE)
+
+for(p in names(infiles)){
+
+  m0 <- list(infile=infiles[p], period="ann", analysis="pfit")
+ 
+  m1 <- rev(as.list(mcor[[p]]))
+  names(m1) <- paste0(names(m1),"cor")
+
+  m2 <- rev(as.list(mmad[[p]]))
+  names(m2) <- paste0(names(m2),"mad")
+
+  metrics <- rbind(metrics, c(m0, m1, m2))
+}
+
+
+## write out metrics
+
+metrics <- metrics[-1,]
+
+write.table(format(metrics, trim=TRUE, digits=3),
+            file=txtfile, quote=FALSE, sep="\t", row.names=FALSE)

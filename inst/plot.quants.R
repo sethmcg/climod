@@ -2,17 +2,20 @@
 library(devtools)
 #load_all("climod")
 load_all("~/climod")
-#library(ncdf4)
-library(quantreg)
+suppressMessages(library(quantreg))
 
-## Call as: Rscript --vanilla box.R label obs cur fut out varname slice
+## Call as: Rscript plot.quants.R label rsave out var
+## rsave = name of saved Rdata file with peak slices
 
+## for testing
+args <- c("tmin HadGEM2-ES RegCM4 ftlogan",
+          "save-test/dmaps/tmin.rcp85.HadGEM2-ES.RegCM4.ftlogan.Rdata",
+          "test.quants.png",
+          "tmin")
+
+## comment out this line for testing
 args <- commandArgs(trailingOnly=TRUE)
 
-#args <- c("tmax HadGEM2-ES RegCM4 ftlogan",
-#          "tmax.test.Rdata",
-#          "test.quants.png",
-#          "tmax")
 
 label <- args[1]
 

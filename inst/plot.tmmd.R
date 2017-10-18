@@ -4,26 +4,24 @@ library(devtools)
 load_all("~/climod")
 library(ncdf4)
 
-## Call as: Rscript --vanilla tmmd.R label tmax.obs tmax.cur tmax.fut out
+## Call as: Rscript plot.pfit.R label obs cur fut png var txt
 
-## tmin files are assumed analogous to tmax files.  dtr is calculated
-## as tmax-tmin
+## provide input files for tmax; tmin is assumed analogous
+## png = name of output file for plotted figure
+## txt = name of output file for plain-text table of metrics
 
+# for testing
+args <- c("rcp85 HadGEM2-ES RegCM4 birmingham",
+          "obs/tmax.obs.livneh.birmingham.nc",
+          "save-test/tmax.hist.HadGEM2-ES.RegCM4.birmingham.nc",
+          "save-test/tmax.rcp85.HadGEM2-ES.RegCM4.birmingham.nc",
+          "test.tmmd.png",
+          "tmax",
+          "test.tmmd.txt"
+          )
+
+## comment out this line for testing
 args <- commandArgs(trailingOnly=TRUE)
-
-# # for testing
-# args <- c("rcp85 HadGEM2-ES WRF ftlogan",
-#           "obs/tmax.obs.livneh.ftlogan.nc",
-#           "raw/tmax.hist.HadGEM2-ES.WRF.ftlogan.nc",
-#           "raw/tmax.rcp85.HadGEM2-ES.WRF.ftlogan.nc",
-#           "tmax.test.tmmd.png")
-#
-# args <- c("rcp85 WRF GFDL-ESM2M armsite",
-#          "obs/tmax.obs.livneh.armsite.nc",
-#          "save-test/tmax.hist.GFDL-ESM2M.WRF.armsite.nc",
-#          "save-test/tmax.rcp85.GFDL-ESM2M.WRF.armsite.nc",
-#          "fig-save/tmmd/tmmd.rcp85.WRF.GFDL-ESM2M.armsite.png",
-#          "tmax")
 
 
 label <- args[1]
@@ -35,7 +33,10 @@ maxfiles["fut"] <- args[4]
 
 outfile <- args[5]
 
+varname <- args[6]
+stopifnot(varname == "tmax")
 
+txtfile <- args[7]
 
 minfiles <- gsub("tmax", "tmin", maxfiles)
 
@@ -118,4 +119,43 @@ mtext(label, line=1, outer=TRUE)
     
 dev.off()
 
+
+
+## metrics
+
+
+mtemp <- lapply(tdata, function(x){as.list(as.data.frame(x))})
+
+
+mcor <- lapply(mtemp, function(x){lapply(x, function(y){cor(y, x$obs)})})
+mcor <- lapply(renest(mcor), unlist)
+mmad <- lapply(mtemp, function(x){lapply(x, function(y){mad(y-x$obs, center=0)})})
+mmad <- lapply(renest(mmad), unlist)
+
+
+metrics <- data.frame(infile="dummy", period="ann", analysis="tmmd",
+                      tmaxcor=0, tmincor=0, dtrcor=0,
+                      tmaxmad=0, tminmad=0, dtrmad=0,
+                      stringsAsFactors=FALSE)
+
+for(p in names(maxfiles)){
+
+  m0 <- list(infile=maxfiles[p], period="ann", analysis="tmmd")
+ 
+  m1 <- as.list(mcor[[p]])
+  names(m1) <- paste0(names(m1),"cor")
+
+  m2 <- as.list(mmad[[p]])
+  names(m2) <- paste0(names(m2),"mad")
+
+  metrics <- rbind(metrics, c(m0, m1, m2))
+}
+
+
+## write out metrics
+
+metrics <- metrics[-1,]
+
+write.table(format(metrics, trim=TRUE, digits=3),
+            file=txtfile, quote=FALSE, sep="\t", row.names=FALSE)
 

@@ -135,7 +135,7 @@ metrics <- data.frame(infile="dummy", period="mon", analysis="mpdf",
                       pdfsk = 0, tailsk = 0, stringsAsFactors=FALSE)
 
 for(p in names(infiles)){
-  metrics <- rbind(metrics, data.frame(infile = c(infiles[p]),
+  metrics <- rbind(metrics, data.frame(infile = infiles[p],
                                  period = month.abb,
                                  analysis = "mpdf",
                                  pdfsk = skill[[p]]$pdf,
