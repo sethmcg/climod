@@ -101,11 +101,13 @@ matplot(x, tdata$tmax, type="l", col=ocf, lty=1, ylim=yr,
         xlab="day of year", ylab=units, main="mean daily Tmax")
 abline(v=which.max(tdata$tmax[,"obs"]), col="gray")
 abline(v=which.min(tdata$tmax[,"obs"]), col="gray", lty=2)
+abline(h=0, col="gray")
 
 matplot(x, tdata$tmin, type="l", col=ocf, lty=1, ylim=yr,
         xlab="day of year", ylab=units, main="mean daily Tmin")
 abline(v=which.max(tdata$tmin[,"obs"]), col="gray")
 abline(v=which.min(tdata$tmin[,"obs"]), col="gray", lty=2)
+abline(h=0, col="gray")
 
 legend("topright", names(ocf), col=ocf, lty=1, horiz=TRUE)
 legend("topleft", c("max", "min"), col="gray", lty=c(1,2), horiz=TRUE)
