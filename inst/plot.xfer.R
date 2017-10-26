@@ -2,16 +2,18 @@
 library(devtools)
 #load_all("climod")
 load_all("~/climod")
-#library(ncdf4)
 
-## Call as: Rscript --vanilla xfer.R label obs cur fut out varname slice
+## Call as: Rscript plot.xfer.R label save png var
 
+args <- c("rcp85 HadGEM2-ES WRF ftlogan",
+          "save-test/dmaps/prec.rcp85.HadGEM2-ES.WRF.ftlogan.Rdata",
+          "test.yrmax.png",
+          "prec")
+
+## Comment out this line for testing
 args <- commandArgs(trailingOnly=TRUE)
 
-#args <- c("prec HadGEM2-ES WRF ftlogan",
-#          "plot-test/dmaps/prec.rcp85.HadGEM2-ES.WRF.ftlogan.Rdata",
-#          "fig/xfer.prec.rcp85.HadGEM2-ES.WRF.ftlogan.png",
-#          "prec")
+
 
 label <- args[1]
 
