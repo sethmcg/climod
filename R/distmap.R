@@ -34,11 +34,13 @@
 ##' generating negative values in the case of a variable bounded at
 ##' zero like precipitation.  Defaults to FALSE.
 ##'
-##' @param trim Logical; if TRUE, omits very extreme values when
-##' constructing the mapping.  This is useful for preventing
+##' @param trim a function used to omit unwanted values when
+##' constructing the mapping. This is useful for preventing
 ##' overfitting of the tails in heavy-tailed variables like
-##' precipitation.  Extreme values are detected using the
-##' \code{\link{chauvenet}} function.  Defaults to FALSE.
+##' precipitation by trimming very extreme values using a function
+##' like \code{\link{lof1d}} or \code{\link{chauvenet}}.  The function
+##' should take a vector of values as input and return the same vector
+##' with the unwanted values removed.  Defaults to NULL.
 ##' 
 ##' @param na.rm Logical; if TRUE (default), remove NA values before
 ##' constructing distribution mapping.
@@ -100,7 +102,7 @@
 
 
 distmap <- function(x, y, densfun=KernSmooth::bkde,
-                    pgrid=ppoints(1000), truncate=FALSE, trim=FALSE,
+                    pgrid=ppoints(1000), truncate=FALSE, trim=NULL,
                     na.rm=TRUE, ...){
 
     if(na.rm){
@@ -118,9 +120,9 @@ distmap <- function(x, y, densfun=KernSmooth::bkde,
     stopifnot(all(pgrid <= 1))
     stopifnot(all(diff(pgrid) > 0))
 
-    if(trim){
-      x <- chauvenet(x)
-      y <- chauvenet(y)
+    if(!(is.null(trim))){
+      x <- trim(x)
+      y <- trim(y)
     }
    
     xpdf <- densfun(x, ...)

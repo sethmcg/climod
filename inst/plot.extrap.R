@@ -27,9 +27,9 @@ ylab <- paste("BC",  v, paste0("(",units,")"))
 
 cmap <- c(train="gray", cur="blue", fut="red")
 
-png(outfile, units="in", res=120, width=7, height=7)
+png(outfile, units="in", res=120, width=7, height=11)
 
-par(mfrow=c(2,2), oma=c(0,0,2,0), mar=c(4,4,3,2), mgp=c(2.5,1,0))
+par(mfrow=c(3,2), oma=c(1,0,2,0), mar=c(4,4,3,2), mgp=c(2.5,1,0))
 
 for (p in names(peaks)){
 
@@ -51,11 +51,11 @@ for (p in names(peaks)){
 mtext(label, outer=TRUE)
 
 
-## centered legend outside plots
+## centered bottom legend outside plots
 
 par(fig=c(0,1,0,1), new=TRUE)
 plot(0, 0, type="n", bty="n", xaxt="n", yaxt="n", ann=FALSE)
-legend("center", c("train","cur","fut"),
+legend("bottom", c("train","cur","fut"), horiz=TRUE,
         pch=c(19,1,1), col=cmap, pt.cex=c(1.5,1,1))
 
 

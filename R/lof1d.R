@@ -8,9 +8,9 @@
 ##' uses a highly simplified calculation to trim outlier values from
 ##' the upper tail of 1-dimensional data.
 ##'
-##' Third and subsequent paragraphs are details: a long section shown
-##' after the argument that goes into detail about how the function
-##' works.  https://en.wikipedia.org/wiki/Local_outlier_factor
+##' If length(x) is less than 3*k, the vector is returned unchanged.
+##' See the Wikipedia page for a description of the LOF algorithm:
+##' \url{https://en.wikipedia.org/wiki/Local_outlier_factor}
 ##'
 ##' @param x A vector of values.
 ##'
@@ -35,6 +35,8 @@
 
 lof1d <- function(x, k=5, cutoff=3){
 
+  if(length(x) < 3*k){warning("lof1d: too few values to calculate 1-D LOF"); return(x)}
+  
   ## To look at the top k values, we need the k nearest neighbors of the
   ## kth value, and then the k nearest neighbors of each of those, so we
   ## might need the 3*kth value.
@@ -66,8 +68,12 @@ lof1d <- function(x, k=5, cutoff=3){
   
   ## trim values with LOF > cutoff
 
-  z <- x[-ox[lof > cutoff]]
-
+  if(any(lof > cutoff)){
+    z <- x[-ox[lof > cutoff]]
+  } else {
+    z <- x
+  }
+    
   return(z)
 
 }

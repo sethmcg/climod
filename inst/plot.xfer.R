@@ -22,9 +22,9 @@ outfile <- args[3]
 v <- args[4]
 
 
-png(outfile, units="in", res=120, width=7, height=7)
+png(outfile, units="in", res=120, width=7, height=11)
 
-par(mfrow=c(2,2), oma=c(0,0,2,0), mar=c(3,3,2,1))
+par(mfrow=c(3,2), oma=c(0,0,2,0), mar=c(3,3,2,1))
 
 for (p in names(peaks)){
   plot(dmaps[[p]], xlab="", ylab="")

@@ -8,17 +8,19 @@ suppressMessages(library(quantreg))
 ## Call as: Rscript kddm.R var obs cur fut cout fout
 ## (used to call with --vanilla but on cheyenne it can't find pkgs...)
 
-args <- commandArgs(trailingOnly=TRUE)
 
-# # For testing
-# args <- c("tmax",
-#           "obs/tmax.obs.livneh.ftlogan.nc",
-#           "raw/tmax.hist.HadGEM2-ES.RegCM4.ftlogan.nc",
-#           "raw/tmax.rcp85.HadGEM2-ES.RegCM4.ftlogan.nc",
-#           "tmax.test.cur.nc",
-#           "tmax.test.fut.nc",
-#           "tmax.test.Rdata"
-#           )
+# For testing
+args <- c("prec",
+          "obs/prec.obs.livneh.ftlogan.nc",
+          "raw/prec.hist.HadGEM2-ES.WRF.ftlogan.nc",
+          "raw/prec.rcp85.HadGEM2-ES.WRF.ftlogan.nc",
+          "prec.test.cur.nc",
+          "prec.test.fut.nc",
+          "prec.test.Rdata"
+          )
+
+## comment out this line for testing
+#args <- commandArgs(trailingOnly=TRUE)
 
 
 varname <- args[1]
@@ -134,18 +136,27 @@ if(varname == "prec"){
   ddu <- rapply(ddz, unzero, how="replace")
   ## dummy list on innermost nesting to match segmented slice structure for temp
   datatobc <- rapply(renest(ddu), list, how="replace")
+
+  bctrunc <- TRUE
+  bctrim  <- lof1d
+  
 } else {
   ## just invert list nesting
   datatobc <- renest(wind)
+
+  bctrunc <- FALSE
+  bctrim  <- NULL
 }
 
 
 ## bias-correct each window
-fixdata <- lapply(datatobc, biascorrect, norm, truncate=(varname=="prec"), dmap=saveslice)
+
+fixdata <- lapply(datatobc, biascorrect, norm, dmap=saveslice,
+                  truncate=bctrunc, trim=bctrim)
 
 
 if(saveslice){
-  ## Have to separate out the distmaps, or things break
+  ## Have to separate out the distmaps, or unslicing breaks
   fixdata <- renest(fixdata)
   dmaps <- fixdata$distmap
   fixdata$distmap <- NULL
@@ -177,10 +188,12 @@ if(saveslice){
   ifix <- mapply(subslice, bc,   cwin, split=FALSE, SIMPLIFY=FALSE)
   
   peaks <- c()
-  peaks["obsmin"]  <- which.min(sapply(oraw$obs, mean, na.rm=TRUE))
-  peaks["obsmax"]  <- which.max(sapply(oraw$obs, mean, na.rm=TRUE))
-  peaks["curpeak"] <- which.max(sapply(iraw$cur, max,  na.rm=TRUE))
-  peaks["futpeak"] <- which.max(sapply(iraw$fut, max,  na.rm=TRUE))
+  peaks["obsmin"]   <- which.min(sapply(oraw$obs, mean, na.rm=TRUE))
+  peaks["obsmax"]   <- which.max(sapply(oraw$obs, mean, na.rm=TRUE))
+  peaks["rawcurpk"] <- which.max(sapply(iraw$cur, max,  na.rm=TRUE))
+  peaks["rawfutpk"] <- which.max(sapply(iraw$fut, max,  na.rm=TRUE))
+  peaks["fixcurpk"] <- which.max(sapply(ifix$cur, max,  na.rm=TRUE))
+  peaks["fixfutpk"] <- which.max(sapply(ifix$fut, max,  na.rm=TRUE))
 
   jdays <- round(peaks/length(fixdata)*365.25)
   dates <- format(as.Date(jdays, origin="1950-01-1"), format="%b %d")
@@ -218,9 +231,24 @@ if(saveslice){
   outerdata <- list(raw=osraw, fix=osfix)
 
   units <- indata$obs@units
+
+  ## annual maxima
+  iodata <- c(indata, outdata)
+  iodata[4] <- NULL
+  names(iodata) <- c("obs", "rawcur", "rawfut", "fixcur", "fixfut")
+  iotime <- c(time,time)
+  iotime[4] <- NULL
+  names(iotime) <- c("obs", "rawcur", "rawfut", "fixcur", "fixfut")
+  year <- lapply(iotime, function(x){floor(x/yearlength(x))})
+  ydata <- mapply(split, iodata, year)
+  bmax <- lapply(ydata, function(x){sapply(x, max, na.rm=TRUE, USE.NAMES=FALSE)})
+  yyear <- lapply(year, function(x){unique(x)+1950})
+  annmax <- lapply(mapply(cbind, yyear, bmax), as.data.frame)
+  annmax <- lapply(annmax, `colnames<-`, c("year",varname))
+
   
   save(peaks, jdays, dates, dmaps, innerdata, outerdata, tslice, units,
-       file=savefile)
+       annmax, file=savefile)
 }
 
 
