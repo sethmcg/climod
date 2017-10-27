@@ -90,8 +90,7 @@ tdata <- lapply(lapply(cdata, capply, mean, na.rm=TRUE), as.matrix)
 ## plotting
 
 png(outfile, units="in", res=120, width=7, height=7)
-
-par(mfrow=c(3,1), oma=c(0,0,3,0))
+par(mfrow=c(3,1), oma=c(0,0,3,0), mar=c(4,4,3,2), mgp=c(2.5,1,0))
 
 yr <- range(unlist(tdata[c("tmax","tmin")]))
 
@@ -109,16 +108,21 @@ abline(v=which.max(tdata$tmin[,"obs"]), col="gray")
 abline(v=which.min(tdata$tmin[,"obs"]), col="gray", lty=2)
 abline(h=0, col="gray")
 
-legend("topright", names(ocf), col=ocf, lty=1, horiz=TRUE)
-legend("topleft", c("max", "min"), col="gray", lty=c(1,2), horiz=TRUE)
-
 matplot(x, tdata$dtr,  type="l", col=ocf, lty=1,
         xlab="day of year", ylab=units, main="mean daily DTR")
 abline(v=which.max(tdata$dtr[,"obs"]), col="gray")
 abline(v=which.min(tdata$dtr[,"obs"]), col="gray", lty=2)
 
 mtext(label, line=1, outer=TRUE)
-    
+
+## legends in top corners outside plots
+par(fig=c(0,1,0,1), mfrow=c(1,1), mar=c(0,0,0,0), oma=rep(0.5,4), new=TRUE)
+plot(0, 0, type="n", bty="n", xaxt="n", yaxt="n", ann=FALSE)    
+legend("topright", names(ocf), col=ocf, lty=1,
+       horiz=TRUE, cex=0.65, seg.len=1)
+legend("topleft", c("max", "min"), col="gray", lty=c(1,2),
+       horiz=TRUE, cex=0.65)
+
 dev.off()
 
 

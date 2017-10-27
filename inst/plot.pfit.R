@@ -69,7 +69,7 @@ pfit <- function(ocfdata){
 ## pfit plotting
 plot.pfit <- function(prec, fname, title=""){
     png(fname, units="in", res=120, width=7, height=7)
-    par(mfrow=c(3,1), oma=c(0,0,3,0))
+    par(mfrow=c(3,1), oma=c(0,0,3,0), mar=c(4,4,3,2), mgp=c(2.5,1,0))
 
     yint <- max(unlist(prec$int), na.rm=TRUE)
     ytot <- max(unlist(prec$tot))
@@ -80,8 +80,6 @@ plot.pfit <- function(prec, fname, title=""){
             xlab="day of year", ylab="% wet", main="mean precip frequency")
     abline(v=which.max(prec$freq[,"obs"]), col="gray")
     abline(v=which.min(prec$freq[,"obs"]), col="gray", lty=2)
-    legend("bottomright", names(ocf), col=ocf, lty=1, horiz=TRUE)
-    legend("bottomleft", c("max", "min"), col="gray", lty=c(1,2), horiz=TRUE)
     matplot(x, prec$int,  type="l", col=ocf, lty=1, ylim=c(0,yint),
             xlab="day of year", ylab="mm/day", main="mean precip intensity")
     abline(v=which.max(prec$int[,"obs"]), col="gray")
@@ -92,7 +90,15 @@ plot.pfit <- function(prec, fname, title=""){
     abline(v=which.min(prec$tot[,"obs"]), col="gray", lty=2)
 
     mtext(title, line=1, outer=TRUE)
-    
+
+    ## legends in top corners outside plots
+    par(fig=c(0,1,0,1), mfrow=c(1,1), mar=c(0,0,0,0), oma=rep(0.5,4), new=TRUE)
+    plot(0, 0, type="n", bty="n", xaxt="n", yaxt="n", ann=FALSE)    
+    legend("topright", names(ocf), col=ocf, lty=1,
+           horiz=TRUE, cex=0.65, seg.len=1)
+    legend("topleft", c("max", "min"), col="gray", lty=c(1,2),
+           horiz=TRUE, cex=0.65)
+
     dev.off()
 }
 

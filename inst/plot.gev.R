@@ -11,10 +11,10 @@ suppressMessages(library(extRemes))
 ## png = name of output file for plotted figure
 ## txt = name of output file for plain-text table of metrics
 
-args <- c("rcp85 HadGEM2-ES RegCM4 birmingham",
-          "obs/prec.obs.livneh.birmingham.nc",
-          "save-test/prec.hist.HadGEM2-ES.RegCM4.birmingham.nc",
-          "save-test/prec.rcp85.HadGEM2-ES.RegCM4.birmingham.nc",
+args <- c("rcp85 MPI-ESM-LR WRF yosemite",
+          "obs/prec.obs.livneh.yosemite.nc",
+          "raw/prec.hist.MPI-ESM-LR.WRF.yosemite.nc",
+          "raw/prec.rcp85.MPI-ESM-LR.WRF.yosemite.nc",
           "test.gev.png",
           "prec",
           "test.gev.txt"
@@ -55,24 +55,26 @@ time <- lapply(time, alignepochs, "days since 1950-01-01")
 ### find block maxima
 year <- lapply(time, function(x){floor(x/yearlength(x))})
 ydata <- mapply(split, data, year)
-bmax <- lapply(ydata, function(x){sapply(x, max, USE.NAMES=FALSE)})
+bmax <- lapply(ydata, function(x){sapply(x, max, na.rm=TRUE, USE.NAMES=FALSE)})
 
 yyear <- lapply(year, function(x){unique(x)+1950})
 annmax <- lapply(mapply(cbind, yyear, bmax), as.data.frame)
 annmax <- lapply(annmax, `colnames<-`, c("year","prec"))
 
+## Stationary GEV
 fits <- lapply(bmax, fevd, units=units)
 
 
+## Nonstationary GEV
 nsfits <- lapply(annmax, function(x){
   fevd(data=x, x=prec, annmax, units=units,
        location.fun=~year, scale.fun=~year)})
 
-
+## NS effective return levels
 nsper <- c(50,100,200)
 nserlev <- lapply(lapply(nsfits, erlevd, period=nsper), t)
 
-
+## plotting
 png(outfile, units="in", res=120, width=7, height=7)
 
 ylim <- c(0, max(sapply(fits, function(x){ci(x, return.period=500)[3]})))
@@ -98,11 +100,10 @@ dev.off()
 
 
 
-## Calculate
+## Calculate metrics
 
 metrics <- data.frame(infile = "dummy", period="Xyr", analysis="gev",
                       rlevlo=0, rlevmid=0, rlevhi=0,
-                      
                       stringsAsFactors=FALSE)
 
 rps <- c(5, 10, 20, 50, 100)

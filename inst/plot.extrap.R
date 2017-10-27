@@ -6,8 +6,8 @@ load_all("~/climod")
 ## Call as: Rscript plot.extrap.R label save png var
 
 args <- c("rcp85 HadGEM2-ES WRF ftlogan",
-          "save-test/dmaps/prec.rcp85.HadGEM2-ES.WRF.ftlogan.Rdata",
-          "test.yrmax.png",
+          "v1.lof.bc/dmaps/prec.rcp85.HadGEM2-ES.WRF.ftlogan.Rdata",
+          "test.extrap.png",
           "prec")
 
 ## Comment out this line for testing
@@ -55,8 +55,8 @@ mtext(label, outer=TRUE)
 
 ## centered bottom legend outside plots
 
-par(fig=c(0,1,0,1), new=TRUE)
-plot(0, 0, type="n", bty="n", xaxt="n", yaxt="n", ann=FALSE)
+par(mfrow=c(1,1), fig=c(0,1,0,1), oma=c(0.5,0,0,0), mar=c(0,0,0,0), new=TRUE)
+plot(0, 1, type="n", bty="n", xaxt="n", yaxt="n", ann=FALSE)
 legend("bottom", c("train","cur","fut"), horiz=TRUE,
         pch=c(19,1,1), col=cmap, pt.cex=c(1.5,1,1))
 

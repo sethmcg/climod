@@ -79,7 +79,7 @@ extend <- 3*stats::bw.nrd(unlist(mdata))
 
 png(outfile, units="in", res=120, width=10, height=7)
 
-par(mfrow=c(3,4), oma=c(0,0,3,0), mar=c(2.5,1.5,3,1.5)+0.1)
+par(mfrow=c(3,4), oma=c(0,0,3,0), mar=c(2.5,1.5,4.5,1.5)+0.1)
 
 mdata <- renest(cdata)
 names(mdata) <- month.abb
@@ -98,22 +98,14 @@ for(m in month.abb){
   mplot(lapply(mdata[[m]], akde, min.x=min(xr), max.x=max(xr)),
         yaxt="n", col=ocf, type='l', lty=1, main=m, xlab=units, ylab="")
 
-  if(v=="prec" || m %in% month.abb[4:9]){
-    lloc <- "topleft"
-    tw <-4
-    xi <- 0
-  } else {
-    lloc <- "topright"
-    tw <- 8
-    xi <- -1
-  }
-  
-  legend(lloc, title="skill scores", text.width=tw,
-         ncol=2, bty="n", seg.len=0, x.intersp=xi,
-         legend=c("pdf:", "", "tail:", "",
-           skill$cur$pdf[m], skill$fut$pdf[m],
-           skill$cur$tail[m], skill$fut$tail[m]),
-         text.col=ocf[c(1,1,1,1,2,3,2,3)])
+  ## Skill annotations above plot
+  mtext("pdf skill", adj=0, line=2.5, cex=0.7)
+  mtext(skill$cur$pdf[m], adj=0, line=1.5, col=ocf[2], cex=0.7)
+  mtext(skill$fut$pdf[m], adj=0, line=0.5, col=ocf[3], cex=0.7)
+
+  mtext("tail skill", adj=1, line=2.5, cex=0.7)
+  mtext(skill$cur$tail[m], adj=1, line=1.5, col=ocf[2], cex=0.7)
+  mtext(skill$fut$tail[m], adj=1, line=0.5, col=ocf[3], cex=0.7)
 }
 
 mtext(paste(label, "PDFs (",units,")"), line=1, outer=TRUE)

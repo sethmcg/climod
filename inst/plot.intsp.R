@@ -66,14 +66,15 @@ names(sdata) <- c("DJF","MAM","JJA","SON")
 
 
 ## Data from one gridcell is much noisier than data over a region;
-## need to trim extreme values and use PB (bigger) binning instead of
-## FD to keep the noise from distorting things.
+## need to trim extreme values and use P-B (bigger) binning instead of
+## FD (default) to keep the noise from distorting things.
 
 ## Drop zero values
 unzdata <- rapply(sdata, how="replace", function(x){x[x>0]})
 
 ## Trim upper 99%ile values
-zdata <- rapply(unzdata, function(x){x[x<quantile(x,0.99)]}, how="replace")
+trim <- function(x){x[x<quantile(x,0.99,na.rm=TRUE)]}
+zdata <- rapply(unzdata, trim, how="replace")
 
 ## Panofsky-Brier recommendation for number of histogram bins
 PB <- function(x){
@@ -118,16 +119,18 @@ for(s in names(zdata)){
     metrics <- rbind(metrics, list(infiles[f], s, "intsp", coef(fits[[f]])[2]))
   }
   
-  abline(v=quantile(p$obs,0.5),col="gray")
-  
-  legend("topright", names(cmap), col=cmap, pch=1)
-
-  
-  
+  abline(v=quantile(p$obs,0.5),col="gray")  
 }
 
 mtext(label, line=1, outer=TRUE)
-    
+
+
+## centered legend outside plots
+
+par(fig=c(0,1,0,1), mar=c(0,0,0,0), oma=c(0,0,0,0), new=TRUE)
+plot(c(0,1), c(0,1), type="n", bty="n", xaxt="n", yaxt="n", ann=FALSE)
+legend(0.49, 0.51, names(cmap), col=cmap, pch=1)
+
 dev.off()
 
 

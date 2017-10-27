@@ -9,7 +9,7 @@ suppressMessages(library(quantreg))
 
 ## for testing
 args <- c("tmin HadGEM2-ES RegCM4 ftlogan",
-          "save-test/dmaps/tmin.rcp85.HadGEM2-ES.RegCM4.ftlogan.Rdata",
+          "v1.lof.bc/dmaps/tmin.rcp85.HadGEM2-ES.RegCM4.ftlogan.Rdata",
           "test.quants.png",
           "tmin")
 
@@ -35,7 +35,7 @@ tau <- c(0.02, 0.09, 0.25, 0.5, 0.75, 0.91, 0.98)
 
 png(outfile, units="in", res=120, width=7, height=7)
 
-par(mfrow=c(4,1), oma=c(0,0,2,0), mar=c(3,3,2,1))
+par(mfrow=c(3,2), oma=c(0,0,3,0), mar=c(3,3,2,1))
 
 for (p in names(peaks)){
 
@@ -64,7 +64,7 @@ for (p in names(peaks)){
 
 }
   
-mtext(paste(label,"quantile regression (",units,")"), outer=TRUE)
+mtext(paste(label,"quantile regression (",units,")"), line=1, outer=TRUE)
 
 dev.off()
 

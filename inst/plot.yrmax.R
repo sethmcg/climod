@@ -6,7 +6,7 @@ load_all("~/climod")
 ## Call as: Rscript plot.yrmax.R label save png var
 
 args <- c("rcp85 HadGEM2-ES WRF ftlogan",
-          "save-test/dmaps/prec.rcp85.HadGEM2-ES.WRF.ftlogan.Rdata",
+          "v1.lof.bc/dmaps/prec.rcp85.HadGEM2-ES.WRF.ftlogan.Rdata",
           "test.yrmax.png",
           "prec")
 
