@@ -25,6 +25,8 @@ args <- commandArgs(trailingOnly=TRUE)
 
 varname <- args[1]
 
+isprec <- (varname == "prec" || varname == "pr")
+
 infiles   <- c()
 outfiles  <- c()
 
@@ -45,9 +47,12 @@ if(saveslice){
   savefile <- args[7]
 }
 
-norms <- c(prec="boxcox", tmax="zscore", tmin="zscore")
+if(isprec){
+  norm <- "boxcox"
+} else {
+  norm <- "zscore"
+}
 
-norm <- norms[varname]
 
 print(basename(outfiles["fut"]))
         
@@ -119,7 +124,7 @@ mwinwidth = 30
 ### to be pooled across years for dedrizzling and to ensure there are
 ### enough non-zero values to be able to fit the boxcox normalization.
 
-cwin <- lapply(time, cslice, outer=mwinwidth, num=360, split=(varname!="prec"))
+cwin <- lapply(time, cslice, outer=mwinwidth, num=360, split=!isprec)
 
     
 ##############################
@@ -129,7 +134,8 @@ cwin <- lapply(time, cslice, outer=mwinwidth, num=360, split=(varname!="prec"))
 wind <- mapply(slice, indata, cwin,
                MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE)
 
-if(varname == "prec"){
+if(isprec){
+  
   ## dedrizzle by slice
   ddz <- renest(lapply(renest(wind), dedrizzle))
   ## unzero
@@ -139,7 +145,6 @@ if(varname == "prec"){
 
   bctrunc <- TRUE
   bctrim  <- lof1d
-  
 } else {
   ## just invert list nesting
   datatobc <- renest(wind)
@@ -165,7 +170,7 @@ if(saveslice){
 
 
 ## rearrange back to sliced conformation
-if(varname == "prec"){
+if(isprec){
   ## rezero data, get rid of the dummy inner list, and re-invert
   rez <- rapply(fixdata, rezero, how="replace")  
   bc <- renest(lapply(rez, function(x){lapply(x, unlist)}))
