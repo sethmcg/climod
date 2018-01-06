@@ -144,7 +144,7 @@ if(isprec){
   datatobc <- rapply(renest(ddu), list, how="replace")
 
   bctrunc <- TRUE
-  bctrim  <- lof1d
+  bctrim  <- ptrim
 } else {
   ## just invert list nesting
   datatobc <- renest(wind)
@@ -157,7 +157,7 @@ if(isprec){
 ## bias-correct each window
 
 fixdata <- lapply(datatobc, biascorrect, norm, dmap=saveslice,
-                  truncate=bctrunc, trim=bctrim)
+                  truncate=bctrunc, trim=bctrim, densfun=akde)
 
 
 if(saveslice){
