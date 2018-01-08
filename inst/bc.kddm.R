@@ -145,19 +145,21 @@ if(isprec){
 
   bctrunc <- TRUE
   bctrim  <- ptrim
+  densfun <- akde
 } else {
   ## just invert list nesting
   datatobc <- renest(wind)
 
   bctrunc <- FALSE
   bctrim  <- NULL
+  densfun <- bkde
 }
 
 
 ## bias-correct each window
 
 fixdata <- lapply(datatobc, biascorrect, norm, dmap=saveslice,
-                  truncate=bctrunc, trim=bctrim, densfun=akde)
+                  truncate=bctrunc, trim=bctrim, densfun=densfun)
 
 
 if(saveslice){

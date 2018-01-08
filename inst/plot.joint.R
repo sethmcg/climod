@@ -26,7 +26,7 @@ rsub <- function(x,y){
 ## png = name of output file for plotted figure
 ## txt = name of output file for plain-text table of metrics
 
-args <- c("rcp85 HadGEM2-ES WRF birmingham",
+args <- c("joint rcp85 HadGEM2-ES WRF birmingham",
           "obs/prec.obs.livneh.birmingham.nc",
           "save-test/prec.hist.HadGEM2-ES.WRF.birmingham.nc",
           "save-test/prec.rcp85.HadGEM2-ES.WRF.birmingham.nc",

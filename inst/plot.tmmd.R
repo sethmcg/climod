@@ -11,7 +11,7 @@ library(ncdf4)
 ## txt = name of output file for plain-text table of metrics
 
 # for testing
-args <- c("rcp85 HadGEM2-ES RegCM4 birmingham",
+args <- c("tmmd rcp85 HadGEM2-ES RegCM4 birmingham",
           "obs/tmax.obs.livneh.birmingham.nc",
           "save-test/tmax.hist.HadGEM2-ES.RegCM4.birmingham.nc",
           "save-test/tmax.rcp85.HadGEM2-ES.RegCM4.birmingham.nc",

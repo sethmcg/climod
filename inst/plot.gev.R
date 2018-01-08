@@ -11,7 +11,7 @@ suppressMessages(library(extRemes))
 ## png = name of output file for plotted figure
 ## txt = name of output file for plain-text table of metrics
 
-args <- c("rcp85 MPI-ESM-LR WRF yosemite",
+args <- c("prec rcp85 MPI-ESM-LR WRF yosemite",
           "obs/prec.obs.livneh.yosemite.nc",
           "raw/prec.hist.MPI-ESM-LR.WRF.yosemite.nc",
           "raw/prec.rcp85.MPI-ESM-LR.WRF.yosemite.nc",

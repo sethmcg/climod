@@ -12,7 +12,7 @@ library(moments)
 ## txt = name of output file for plain-text table of metrics
 
 # for testing
-args <- c("rcp85 HadGEM2-ES WRF birmingham",
+args <- c("tmin rcp85 HadGEM2-ES WRF birmingham",
           "obs/tmin.obs.livneh.birmingham.nc",
           "save-test/tmin.hist.HadGEM2-ES.WRF.birmingham.nc",
           "save-test/tmin.rcp85.HadGEM2-ES.WRF.birmingham.nc",

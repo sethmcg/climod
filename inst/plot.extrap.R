@@ -5,7 +5,7 @@ load_all("~/climod")
 
 ## Call as: Rscript plot.extrap.R label save png var
 
-args <- c("rcp85 HadGEM2-ES WRF ftlogan",
+args <- c("prec rcp85 HadGEM2-ES WRF ftlogan",
           "v1.lof.bc/dmaps/prec.rcp85.HadGEM2-ES.WRF.ftlogan.Rdata",
           "test.extrap.png",
           "prec")
