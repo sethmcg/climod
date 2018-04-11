@@ -54,12 +54,11 @@ pdf2cdf <- function(p, x=NULL, normalize=TRUE, expand=FALSE){
         y <- p
     }
     
-    stopifnot(length(x)==length(y),
-              length(x) > 2,
-              all(is.finite(x)),
-              all(is.finite(y)),
-              all(diff(x) > 0)
-              )
+    stopifnot(length(x)==length(y))
+    stopifnot(length(x) > 2)
+    stopifnot(all(is.finite(x)))
+    stopifnot(all(is.finite(y)))
+    stopifnot(all(diff(x) > 0))
 
     if(any(y < 0)){
         y[y < 0] <- 0
