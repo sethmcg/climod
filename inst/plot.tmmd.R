@@ -11,17 +11,19 @@ library(ncdf4)
 ## txt = name of output file for plain-text table of metrics
 
 # for testing
-args <- c("tmmd rcp85 HadGEM2-ES RegCM4 birmingham",
-          "obs/tmax.obs.livneh.birmingham.nc",
-          "save-test/tmax.hist.HadGEM2-ES.RegCM4.birmingham.nc",
-          "save-test/tmax.rcp85.HadGEM2-ES.RegCM4.birmingham.nc",
+args <- c("tmmd rcp85 HadGEM2-ES RegCM4 boulder",
+          "obs/tmax.obs.livneh.boulder.nc",
+          "raw/tmax.hist.HadGEM2-ES.RegCM4.boulder.nc",
+          "raw/tmax.rcp85.HadGEM2-ES.RegCM4.boulder.nc",
           "test.tmmd.png",
           "tmax",
           "test.tmmd.txt"
           )
 
 ## comment out this line for testing
-args <- commandArgs(trailingOnly=TRUE)
+#args <- commandArgs(trailingOnly=TRUE)
+
+
 
 
 label <- args[1]
@@ -40,6 +42,9 @@ txtfile <- args[7]
 
 minfiles <- gsub("tmax", "tmin", maxfiles)
 
+## pseudo-filenames used for metrics
+dtrfiles <- gsub("tmax", "dtr", maxfiles)
+
 ncmax <- lapply(maxfiles, nc_ingest)
 ncmin <- lapply(minfiles, nc_ingest)
 
@@ -57,105 +62,143 @@ time <- lapply(time, alignepochs, "days since 1950-01-01")
 
 
 
-## color palette for bias-correction
-ocf <- c(obs="black", cur="blue", fut="red")
-
-
 ## width of moving window
 mwinwidth = 30
 
+## number of windows
+N = 365
+
 ### generate climatology moving window index arrays
-### 360 ~1-day moving windows w/ 30-day outer pool
-dwin <- lapply(time, cslice, outer=mwinwidth, num=360, split=FALSE)
+### N ~1-day moving windows w/ 30-day outer pool
+dwin <- lapply(time, cslice, outer=mwinwidth, num=N, split=FALSE)
+
+## day of year associated with each window (noleap calendar for simplicity)
+day <- seq(1, 365, length=N)
 
 
-data <- namelist(tmax, tmin, dtr)
+vars <- c("Tmax", "Tmin", "DTR")
 
-cdata <- lapply(data, function(x){ mapply(slice, x, dwin,
-                                          MoreArgs=list(outer=TRUE),
-                                          SIMPLIFY=FALSE)})
+rawdata <- list(tmax, tmin, dtr)
+names(rawdata) <- vars
+
+
+
+
+
+
+## ought to merge this stuff into a windowed cslice apply...
+
+cwindow <- function(x){
+    mapply(slice, x, dwin, MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE)
+}
+
+cdata <- lapply(rawdata, cwindow)
 
 capply <- function(x, f, ...){
   lapply(rapply(x, f, ..., how="replace"), unlist)
 }
 
 
-tdata <- lapply(lapply(cdata, capply, mean, na.rm=TRUE), as.matrix)
+traw <- lapply(cdata, capply, mean, na.rm=TRUE)
+terr <- lapply(traw, function(x){
+    list(cur=x$cur-x$obs, fut=x$fut-x$obs)})
 
-#sdata <- lapply(lapply(cdata, capply, sd), as.matrix)
-#upper <- mapply(`+`, tdata, sdata, SIMPLIFY=FALSE)
-#lower <- mapply(`-`, tdata, sdata, SIMPLIFY=FALSE)
+tdata <- list(raw=traw, err=terr)
+
+minval <- rapply(terr, min, how="replace")
+maxval <- rapply(terr, max, how="replace")
+
+minday <- rapply(terr, which.min, how="replace")
+maxday <- rapply(terr, which.max, how="replace")
+
 
 
 ## plotting
 
+
+## color palette for figures
+ocf <- c(obs="black", cur="blue", fut="red")
+cf  <- ocf[-1]
+
+
 png(outfile, units="in", res=120, width=7, height=7)
-par(mfrow=c(3,1), oma=c(0,0,3,0), mar=c(4,4,3,2), mgp=c(2.5,1,0))
 
-yr <- range(unlist(tdata[c("tmax","tmin")]))
+par(mfrow=c(3,2), oma=c(0,0,3,0), mar=c(4,4,3,2), mgp=c(2.5,1,0))
 
-x <- seq(1, 365, length=nrow(tdata$tmax))
+for(v in vars){
+    matplot(day, as.matrix(tdata$raw[[v]]), type="l", col=ocf, lty=1,
+            xlab="day of year", ylab=units, main=paste("mean daily",v))
+    abline(h=0, col="gray")
 
-matplot(x, tdata$tmax, type="l", col=ocf, lty=1, ylim=yr,
-        xlab="day of year", ylab=units, main="mean daily Tmax")
-abline(v=which.max(tdata$tmax[,"obs"]), col="gray")
-abline(v=which.min(tdata$tmax[,"obs"]), col="gray", lty=2)
-abline(h=0, col="gray")
-
-matplot(x, tdata$tmin, type="l", col=ocf, lty=1, ylim=yr,
-        xlab="day of year", ylab=units, main="mean daily Tmin")
-abline(v=which.max(tdata$tmin[,"obs"]), col="gray")
-abline(v=which.min(tdata$tmin[,"obs"]), col="gray", lty=2)
-abline(h=0, col="gray")
-
-matplot(x, tdata$dtr,  type="l", col=ocf, lty=1,
-        xlab="day of year", ylab=units, main="mean daily DTR")
-abline(v=which.max(tdata$dtr[,"obs"]), col="gray")
-abline(v=which.min(tdata$dtr[,"obs"]), col="gray", lty=2)
+    
+    matplot(day, as.matrix(tdata$err[[v]]), type="l", col=cf, lty=1,
+            xlab="day of year", ylab=units, main=paste(v,"difference from obs"))
+    abline(v=unlist(maxday[[v]]), col=cf, lty=2)
+    abline(v=unlist(minday[[v]]), col=cf, lty=3)
+    abline(h=0, col="gray")
+}
 
 mtext(label, line=1, outer=TRUE)
 
-## legends in top corners outside plots
+### legends in top corners outside plots
 par(fig=c(0,1,0,1), mfrow=c(1,1), mar=c(0,0,0,0), oma=rep(0.5,4), new=TRUE)
 plot(0, 0, type="n", bty="n", xaxt="n", yaxt="n", ann=FALSE)    
 legend("topright", names(ocf), col=ocf, lty=1,
        horiz=TRUE, cex=0.65, seg.len=1)
-legend("topleft", c("max", "min"), col="gray", lty=c(1,2),
+legend("topleft", c("max", "min"), col="gray", lty=c(2,3),
        horiz=TRUE, cex=0.65)
 
 dev.off()
 
 
-
 ## metrics
 
 
-mtemp <- lapply(tdata, function(x){as.list(as.data.frame(x))})
+mtemp <- lapply(terr, function(x){as.list(as.data.frame(x))})
+
+## Average difference from obs.  Using hand-rolled mean absolute
+## deviation / area under curve [auc()] instead of built-in (proper)
+## median absolute deviation [mad()] because we also want to know what
+## fraction of the area under the curve is positive.
+
+auc <- function(x){mean(abs(x))}
+
+ppos <- function(x){
+    tot <- auc(x)
+    x[x<0] <- 0
+    auc(x) / tot * 100
+}
+
+mauc <- rapply(mtemp, auc, how="replace")
+mpos <- rapply(mtemp, ppos, how="replace")
 
 
-mcor <- lapply(mtemp, function(x){lapply(x, function(y){cor(y, x$obs)})})
-mcor <- lapply(renest(mcor), unlist)
-mmad <- lapply(mtemp, function(x){lapply(x, function(y){mad(y-x$obs, center=0)})})
-mmad <- lapply(renest(mmad), unlist)
+infiles <- list(Tmax=as.list(maxfiles[-1]),
+                Tmin=as.list(minfiles[-1]),
+                DTR =as.list(dtrfiles[-1]))
+
+allmet <- list(dmad=mauc, dppos=mpos,
+               dmaxday=maxday, dmaxval=maxval,
+               dminday=minday, dminval=minval)
+
+## rearrange to [var][per][metric]
+allmet <- lapply(renest(allmet), renest)
 
 
 metrics <- data.frame(infile="dummy", period="ann", analysis="tmmd",
-                      tmaxcor=0, tmincor=0, dtrcor=0,
-                      tmaxmad=0, tminmad=0, dtrmad=0,
-                      stringsAsFactors=FALSE)
+                      dauc=0, dpctpos=0, dmaxday=0, dmaxval=0,
+                      dminday=0, dminval=0, stringsAsFactors=FALSE)
 
-for(p in names(maxfiles)){
+for(v in vars){
+    for(p in names(cf)){
 
-  m0 <- list(infile=maxfiles[p], period="ann", analysis="tmmd")
- 
-  m1 <- as.list(mcor[[p]])
-  names(m1) <- paste0(names(m1),"cor")
+        m0 <- list(infile=infiles[[v]][[p]], period="ann", analysis="tmmd")
+        m1 <- allmet[[v]][[p]]
 
-  m2 <- as.list(mmad[[p]])
-  names(m2) <- paste0(names(m2),"mad")
-
-  metrics <- rbind(metrics, c(m0, m1, m2))
+        metrics <- rbind(metrics, c(m0, m1))
+    }
 }
+
 
 
 ## write out metrics
