@@ -85,10 +85,14 @@ denormalize <- function(x, shift=0, scale=1, pscale=1){
 
     norm <- x@norm
     
-    if(!norm %in% c("zscore", "boxcox", "identity")){
+    if(!norm %in% c("zscore", "boxcox", "log", "identity")){
         stop(paste("unknown normalization",norm))
     }
-     
+
+    if(norm == "log"){
+        result <- exp(x)
+    }
+
     if(norm == "zscore"){
 
         out.mu    <- x@mu    + shift

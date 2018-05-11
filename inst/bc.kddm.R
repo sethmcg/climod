@@ -48,7 +48,7 @@ if(saveslice){
 }
 
 if(isprec){
-  norm <- "boxcox"
+  norm <- "log"
 } else {
   norm <- "zscore"
 }

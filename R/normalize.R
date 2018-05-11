@@ -20,6 +20,9 @@
 ##' it's continuous down to a power of 0, which becomes the log.  This
 ##' transformation will stabilize the variance for highly-skewed data.
 ##'
+##' \code{"log"}: take the (natural) log of the data.  Equivalent to
+##' boxcox with lambda=0 and gamma=0.
+##' 
 ##' \code{"identity"}: passes the data through unchanged.  This option
 ##' is sometimes useful for testing and development.
 ##' 
@@ -95,7 +98,7 @@ normalize <- function(x,
         result@mu    <- mu
         result@sigma <- sigma
     }
-    
+
     if(norm=="boxcox"){
         x <- x + gamma     
         if (lambda == 0){
@@ -107,6 +110,10 @@ normalize <- function(x,
         result@gamma  <- gamma
     }
 
+    if(norm=="log"){
+        result <- log(x)
+    }
+    
     if(norm=="identity"){
       result <- x
     }

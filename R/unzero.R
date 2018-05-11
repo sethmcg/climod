@@ -12,10 +12,7 @@
 ##'
 ##' It is not uncommon for precipitation data to have small negative
 ##' values after bias correction.  By default \code{rezero} also sets
-##' those values to zero when returning NA values back to zero.  If
-##' the input has an attribute named "uncorrectable", \code{rezero}
-##' will use it to index into the array and set those values to NA
-##' afterwards.  
+##' those values to zero when returning NA values back to zero.
 ##'
 ##' @param x A vector of numeric values
 ##'
@@ -73,7 +70,7 @@ rezero <- function(x, refloor=TRUE){
         x <- pmax(x,0)
     }
     x[is.na(x)] <- 0
-    x[x@uncorrectable] <- NA
-    x@uncorrectable <- NULL
+#    x[x@uncorrectable] <- NA
+#    x@uncorrectable <- NULL
     return(x)
 }

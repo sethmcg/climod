@@ -13,10 +13,13 @@
 ##' @param norm The type of normalization to use.  See
 ##' \code{\link{normalize}} for more details.
 ##'
-##' @param minobs The minimum number of observations to attempt a bias
-##' correction.  If there are fewer that this many observations (e.g.,
-##' for precipitaiton in a very dry location), non-zero model values
-##' are set to NA.
+##' @param minobs The minimum number of data points to attempt a bias
+##' correction.  If there are fewer that this many values in the
+##' observations or in the current period model output (e.g., for
+##' precipitation in a very dry location), the bias correction falls
+##' back on a simple scaling, dividing by the mean of cur and
+##' multiplying by the mean of the obs.  (If the model mean is zero,
+##' future values are also set to zero.)
 ##'
 ##' @param dmap Logical; if TRUE, returns the \code{\link{distmap}}
 ##' object generated during bias correction as an element named "dmap"
@@ -37,22 +40,29 @@
 ##' 
 ##' @export
 
-biascorrect <- function(bcdata, norm="zscore", minobs=10, dmap=FALSE, ...){
+biascorrect <- function(bcdata, norm="zscore", minobs=250, dmap=FALSE, ...){
 
-  ## If there's too little data to estimate a PDF for either obs or
-  ## cur, it's not possible to bias-correct.  Bail out and set the
-  ## data values to NA instead, to indicate "the model had data here,
-  ## but there's no way to tell what the correct values are."
+  ## If there's too little data to get a good estimate of the PDF for
+  ## either obs or cur, it's not possible to bias-correct using KDDM;
+  ## fall back to simple ratio scaling.  Also set an uncorrectable
+  ## attribute, in case knowing where this has happened is of
+  ## interest.
   
   if(sum(is.finite(unlist(bcdata$obs))) < minobs |
      sum(is.finite(unlist(bcdata$cur))) < minobs ){
+
+    muobs <- mean(unlist(bcdata$obs), na.rm=TRUE)
+    mucur <- mean(unlist(bcdata$cur), na.rm=TRUE)
+    ratio <- ifelse(mucur == 0, 0, muobs/mucur)
+
     unfixable <- function(x){
       x@uncorrectable <- is.finite(x)
-      x + NA
+      x * ratio
     }
     
     result <- rapply(bcdata, unfixable, how="replace")
-    if(dmap){ result$distmap <- distmap(c(0,1),c(0,1)) }    
+    result$obs <- bcdata$obs
+    if(dmap){ result$distmap <- distmap(c(0,mucur),c(0,muobs)) }
     return(result)
   }
 
