@@ -83,7 +83,7 @@ normalize <- function(x,
                       lambda=0,
                       gamma=0){
 
-    norm.names <- c("zscore", "boxcox", "identity")
+    norm.names <- c("zscore", "boxcox", "log", "identity")
     n <- norm.names[pmatch(norm, norm.names)]
     if(is.na(n)){
       stop(paste("unknown normalization",norm))
