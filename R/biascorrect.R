@@ -17,9 +17,9 @@
 ##' correction.  If there are fewer that this many values in the
 ##' observations or in the current period model output (e.g., for
 ##' precipitation in a very dry location), the bias correction falls
-##' back on a simple scaling, dividing by the mean of cur and
-##' multiplying by the mean of the obs.  (If the model mean is zero,
-##' future values are also set to zero.)
+##' back on a simple scaling by the ratio of obs mean to cur mean.
+##' (If the ratio is undefined,  future values are passed through
+##' unchanged.)
 ##'
 ##' @param dmap Logical; if TRUE, returns the \code{\link{distmap}}
 ##' object generated during bias correction as an element named "dmap"
@@ -53,7 +53,12 @@ biascorrect <- function(bcdata, norm="zscore", minobs=250, dmap=FALSE, ...){
 
     muobs <- mean(unlist(bcdata$obs), na.rm=TRUE)
     mucur <- mean(unlist(bcdata$cur), na.rm=TRUE)
-    ratio <- ifelse(mucur == 0, 0, muobs/mucur)
+    ratio <- muobs / mucur
+    if(!is.finite(ratio)){
+      muobs <- 1
+      mucur <- 1
+      ratio <- 1
+    }
 
     unfixable <- function(x){
       x@uncorrectable <- is.finite(x)
