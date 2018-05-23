@@ -21,9 +21,7 @@ args <- c("tmmd rcp85 HadGEM2-ES RegCM4 boulder",
           )
 
 ## comment out this line for testing
-#args <- commandArgs(trailingOnly=TRUE)
-
-
+args <- commandArgs(trailingOnly=TRUE)
 
 
 label <- args[1]
@@ -177,7 +175,7 @@ infiles <- list(Tmax=as.list(maxfiles[-1]),
                 Tmin=as.list(minfiles[-1]),
                 DTR =as.list(dtrfiles[-1]))
 
-allmet <- list(dmad=mauc, dppos=mpos,
+allmet <- list(dmad=mauc, dpctpos=mpos,
                dmaxday=maxday, dmaxval=maxval,
                dminday=minday, dminval=minval)
 
@@ -186,7 +184,7 @@ allmet <- lapply(renest(allmet), renest)
 
 
 metrics <- data.frame(infile="dummy", period="ann", analysis="tmmd",
-                      dauc=0, dpctpos=0, dmaxday=0, dmaxval=0,
+                      dmad=0, dpctpos=0, dmaxday=0, dmaxval=0,
                       dminday=0, dminval=0, stringsAsFactors=FALSE)
 
 for(v in vars){
