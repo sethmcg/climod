@@ -7,7 +7,7 @@ load_all("~/Desktop/climod")
 ## Call as: Rscript dtable.R analysis indir outname
 
 ## analysis = type of analysis (pfit, gev, etc.)
-## indir    = directory where metrics files (type.*.txt) are foudn
+## indir    = directory where metrics files (type.*.txt) are found
 ## outname  = name of output files (out.html & out_files/)
 
 ## Note: if you only want some of the files in the directory, just run
@@ -16,12 +16,12 @@ load_all("~/Desktop/climod")
 ## Note also: if outname is html/dirname, saving generates an error
 ## message and saves to html/html/dirname instead.
 
-args <- c("pfit",
-          "~/Desktop/fig/raw/all/metrics",
-          "test.pfit")
+args <- c("tmmd",
+          "~/Desktop/fig/raw2/all/metrics",
+          "test.tmmd")
 
 ## Comment out this line for testing
-#args <- commandArgs(trailingOnly=TRUE)
+args <- commandArgs(trailingOnly=TRUE)
 
 analysis <- args[1]
 indir    <- args[2]
@@ -48,13 +48,11 @@ rawdf <- do.call(rbind, rawdata)
 
 ## Remove duplicate rows based on those columns.  (Typically the obs
 ## row, which is duplicated across analyses of different models.)
-## Have to based redundancy on only the first three (identifier)
+## Have to base redundancy on only the first three (identifier)
 ## columns, because some analyses (e.g., GEV) don't produce
 ## numerically identical results from run to run.
 
-dups <- duplicated(rawdf[,1:3])
-ddf <- rawdf[-which(dups),]
-
+ddf <- rawdf[!duplicated(rawdf[,1:3]),]
 
 ## Reform the dataframe: drop the analysis column and convert the
 ## filename column to categorical variables.
@@ -64,17 +62,23 @@ ddf <- rawdf[-which(dups),]
 
 fields <- strsplit(basename(ddf$infile), ".", fixed=TRUE)
 
-catlist <- list()
-
 ## Obs: drop last field (.nc)
-obsind <- grep("obs", ddf$infile)
-catlist[obsind] <- lapply(fields[obsind], `[`, -5)
+obsfields <- lapply(fields, `[`, -5)
 
 ## Model: drop last field, combine RCM & GCM into dataset
-modind <- seq(length(fields))[-obsind]
-catlist[modind] <- lapply(fields[modind], function(x){
-    c(x[1], x[2], paste0(x[4],'.',x[3]), x[5])
-})
+modfields <- lapply(fields, function(x){c(x[1], x[2], paste0(x[4],'.',x[3]), x[5])})
+
+
+## Use grepl instead of grep (returns logical vector instead of
+## indices) her because there may be no obs at all, in which case grep
+## would return 0, and array[-0] = array[0] = nothing.
+obsmask <- grepl("obs", ddf$infile)
+modmask <- !obsmask
+
+catlist <- list()
+catlist[obsmask] <- obsfields[obsmask]
+catlist[modmask] <- modfields[modmask]
+
 
 ## Convert into a dataframe
 categoricals <- as.data.frame(t(as.matrix(catlist)))
@@ -84,19 +88,20 @@ colnames(categoricals) <- c("variable", "scenario", "dataset", "location")
 dframe <- cbind(categoricals, ddf[,c(-1,-3)])
 
 ## relevel scenario to put obs first in sorting
-dframe$scenario <- relevel(dframe$scenario, ref="obs")
-
+if("obs" %in% levels(dframe$scenario)){
+    dframe$scenario <- relevel(dframe$scenario, ref="obs")
+}
 
 ## drop nodata data points (used in test suite)
 dframe <- dframe[!dframe$location == "nodata",]
 
 
-## initial sort by scenario, location, and dataset
-sdf <- dframe[with(dframe, order(scenario, location, dataset)), ]
+## initial sort by variable, scenario, location, and dataset
+sdf <- dframe[with(dframe, order(variable, scenario, location, dataset)), ]
 
 
 ## Drop obs for analyses where all metrics are relative to obs
-if(analysis == "pfit"){
+if(analysis == "pfit" || analysis == "tmmd"){
     sdf <- sdf[!sdf$scenario == "obs",]
 }
 
@@ -140,6 +145,17 @@ redblue <- styleInterval(seq(-0.95,0.95,0.1),
                            hsv(2/3, (1:10)/10, 1)
                            ))
 
+## Red to blue bg color style for percentages
+pctredblue <- styleInterval(seq(2.5,97.5,5),
+                         c(hsv(1,   (10:1)/10, 1),
+                           "#FFFFFF",
+                           hsv(2/3, (1:10)/10, 1)
+                           ))
+
+## Rainbow bg color style for days of the year
+doyrainbow <- styleInterval(1:365, rainbow_hcl(366, c=50, l=100))
+
+
 if(analysis == "gev"){
     html <- html %>%
     formatStyle("rlevlo",
@@ -167,12 +183,33 @@ if(analysis == "pfit"){
                   background=styleColorBar(c(0, madmax$freqmad), "#CCCCCC")
                   ) %>%
       formatStyle("intmad",
-                  background=styleColorBar(c(0, madmax$intmad), "#CCCCCC")
+                  background=styleColorBar(c(0, madmax$intmad),  "#CCCCCC")
                   ) %>%
       formatStyle("totmad",
-                  background=styleColorBar(c(0,madmax$totmad), "#CCCCCC")
+                  background=styleColorBar(c(0, madmax$totmad),  "#CCCCCC")
                   )    
 }
+
+if(analysis == "tmmd"){
+
+    vrange <- lapply(sdf[,c("dmad", "dmaxval","dminval")], range)
+    vrange$dmad[1] <- 0  ## set min for MAD to zero
+
+    ## dmad, dminval, dmaxval: colorbars from min to max
+    for(d in c("dmad", "dminval", "dmaxval")){
+        html <- html %>%
+            formatStyle(d, background=styleColorBar(vrange[[d]], "#CCCCCC"))
+    }
+    
+    ## dpctpos: red-blue background 0:100
+    html <- html %>% formatStyle("dpctpos", backgroundColor=pctredblue)
+
+    ## minday & maxday: colorwheel
+    for(d in c("dminday", "dmaxday")){
+        html <- html %>% formatStyle(d, backgroundColor=doyrainbow)
+    }
+}
+    
 
 
 ## Save to file
