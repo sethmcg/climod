@@ -21,7 +21,7 @@
 ##'
 ##' @param epoch A CF time@@units string 
 ##'
-##' @return A time variable with adjusted epoch and
+##' @return A time variable with adjusted epoch and offsets
 ##'
 ##' @examples
 ##' time <- seq(365)-1
@@ -63,7 +63,7 @@ diffdate <- function(date1, date2, calendar="gregorian"){
     return(as.double(difftime(date1, date2, units="days")))
   }
   
-  if(calendar %in% c("noleap", "365_day", "all_leap", "366_day", "360_day")){
+  if(calendar %in% c("365", "noleap", "365_day", "all_leap", "366_day", "360_day")){
     ymd <- rapply(strsplit(c(d1=date1, d2=date2), "-"), as.numeric, how="replace")
  
     return(yearlength(calendar)*(ymd$d1[1] - ymd$d2[1]) +
@@ -71,7 +71,7 @@ diffdate <- function(date1, date2, calendar="gregorian"){
       jday(ymd$d2[2], ymd$d2[3], calendar))
   }
   
-  error(paste("Sorry, diffdate doesn't know how to handle", calendar, "calendar."))
+  stop(paste("Sorry, diffdate doesn't know how to handle", calendar, "calendar."))
 }
 
 
@@ -82,6 +82,7 @@ jday <- function(month, day, calendar){
 
   mlen <- list("noleap"   = std,
                "365_day"  = std,
+               "365"      = std,
                "all_leap" = leap,
                "366_day"  = leap,
                "360_day"  = unif)

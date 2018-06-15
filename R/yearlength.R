@@ -64,6 +64,7 @@ yearlength <- function(time){
     if(calendar %in% c("julian"))    return(365.25)
 
     if(calendar %in% c("noleap",
+                       "365",
                        "365_day"))   return(365)
 
     if(calendar %in% c("all_leap",
