@@ -16,9 +16,9 @@ load_all("~/Desktop/climod")
 ## Note also: if outname is html/dirname, saving generates an error
 ## message and saves to html/html/dirname instead.
 
-args <- c("tmmd",
+args <- c("pfit",
           "~/Desktop/fig/raw2/all/metrics",
-          "test.tmmd")
+          "test.pfit")
 
 ## Comment out this line for testing
 args <- commandArgs(trailingOnly=TRUE)
@@ -156,39 +156,35 @@ pctredblue <- styleInterval(seq(2.5,97.5,5),
 doyrainbow <- styleInterval(1:365, rainbow_hcl(366, c=50, l=100))
 
 
+
 if(analysis == "gev"){
-    html <- html %>%
-    formatStyle("rlevlo",
-              background=styleColorBar(sdf$rlevlo, "#CCCCCC")
-              ) %>%
-    formatStyle("rlevmid",
-              background=styleColorBar(sdf$rlevmid, "#CCCCCC")
-              ) %>%
-    formatStyle("rlevhi",
-              background=styleColorBar(sdf$rlevhi, "#CCCCCC")
-              )
+
+    ## background bars for the different return levels
+    for(m in c("rlevlo", "rlevmid", "rlevhi")){
+        html <- html %>% formatStyle(m, background=styleColorBar(sdf[[m]], "#CCCCCC"))
+    }
 }
+
 
 
 if(analysis == "pfit"){
 
-    ## Max values of MAD metrics for colorbar backgrounds
-    madmax <- lapply(sdf[,c("freqmad","intmad","totmad")], max, na.rm=TRUE)
+    ## range of MAD metrics for background bars
+    vrange <- lapply(sdf[,c("freqmad","intmad","totmad")], range, na.rm=TRUE)
+    vrange <- lapply(vrange, function(x){x[1]<-0;x})  ## set min for MAD to zero
 
-    html <- html %>%
-      formatStyle("freqcor", backgroundColor=redblue) %>%
-      formatStyle("intcor",  backgroundColor=redblue) %>%
-      formatStyle("totcor",  backgroundColor=redblue) %>%
-      formatStyle("freqmad",
-                  background=styleColorBar(c(0, madmax$freqmad), "#CCCCCC")
-                  ) %>%
-      formatStyle("intmad",
-                  background=styleColorBar(c(0, madmax$intmad),  "#CCCCCC")
-                  ) %>%
-      formatStyle("totmad",
-                  background=styleColorBar(c(0, madmax$totmad),  "#CCCCCC")
-                  )    
+    ## red-blue background for correlations
+    for(m in c("freqcor", "intcor", "totcor")){
+        html <- html %>% formatStyle(m, backgroundColor=redblue)
+    }
+
+    ## background bar from 0 to max for MADs
+    for(m in c("freqmad","intmad","totmad")){
+        html <- html %>% formatStyle(m, background=styleColorBar(vrange[[m]], "#CCCCCC"))
+    }
 }
+
+
 
 if(analysis == "tmmd"){
 
