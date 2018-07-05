@@ -64,14 +64,14 @@ biascorrect <- function(bcdata, norm="zscore", minobs=250, dmap=FALSE, ...){
       x@uncorrectable <- is.finite(x)
       x * ratio
     }
-    
+
     result <- rapply(bcdata, unfixable, how="replace")
     result$obs <- bcdata$obs
     if(dmap){ result$distmap <- distmap(c(0,mucur),c(0,muobs)) }
     return(result)
   }
 
-  
+
   ## normalize the three data components
 
     if(norm=="boxcox"){
@@ -88,7 +88,7 @@ biascorrect <- function(bcdata, norm="zscore", minobs=250, dmap=FALSE, ...){
       gamma <- megamma(unlist(bcdata, use.names=FALSE))
       nbcd <- rapply(bcdata, normalize, how="replace", norm=norm, gamma=gamma)
       
-    } else {    
+    } else {
         nbcd <- rapply(bcdata, normalize, how="replace", norm=norm)
     }
     
@@ -124,6 +124,12 @@ biascorrect <- function(bcdata, norm="zscore", minobs=250, dmap=FALSE, ...){
         pscale <- 1
     }
 
+    if(norm == "scale"){
+        scale <- adj$mu2$obs / adj$mu2$cur
+    }
+  
+    ## no adjustments for range or identity norms
+  
     ## denormalize bias-corrected data
     result <- list()
     result$obs <- bcdata$obs

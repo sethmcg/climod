@@ -25,8 +25,6 @@ args <- commandArgs(trailingOnly=TRUE)
 
 varname <- args[1]
 
-isprec <- (varname == "prec" || varname == "pr")
-
 infiles   <- c()
 outfiles  <- c()
 
@@ -47,19 +45,31 @@ if(saveslice){
   savefile <- args[7]
 }
 
-if(isprec){
-  norm <- "log"
-} else {
-  norm <- "zscore"
-}
-
-
 print(basename(outfiles["fut"]))
         
 nc <- lapply(infiles, nc_ingest)
 
 ## extract variables of interest from the netcdf objects
 indata <- lapply(nc,"[[",varname)
+
+
+## which norm to use depends on the variable
+## use standard_name, which is less idiosyncratic than varname
+
+stdname <- (indata$obs)@standard_name
+isprec <- grepl("precip", stdname)
+istemp <- grepl("temperature", stdname)
+
+standard_norms <- c(
+    "precip"                    = "log",
+    "relative_humidity"         = "range",
+    "welling.*wave_flux_in_air" = "scale",
+    "wind_speed"                = "scale",
+    "air_pressure"              = "zscore",
+    "ward_wind"                 = "zscore",
+    "air_temperature"           = "zscore"
+    )
+norm <- standard_norms[sapply(names(standard_norms), grepl, stdname)]
 
 
 ## if inputs are bad (all NA or obs always 0), output is all NA
@@ -123,8 +133,10 @@ mwinwidth = 30
 ### de/normalized separately to handle the trend.  Precip data needs
 ### to be pooled across years for dedrizzling and to ensure there are
 ### enough non-zero values to be able to fit the boxcox normalization.
+### Other variables don't generally show dramatic trends the way
+### temperature does, so we leave them pooled across years.
 
-cwin <- lapply(time, cslice, outer=mwinwidth, num=360, split=!isprec)
+cwin <- lapply(time, cslice, outer=mwinwidth, num=360, split=istemp)
 
     
 ##############################
@@ -135,7 +147,7 @@ wind <- mapply(slice, indata, cwin,
                MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE)
 
 if(isprec){
-  
+
   ## dedrizzle by slice
   ddz <- renest(lapply(renest(wind), dedrizzle))
   ## unzero
@@ -146,14 +158,23 @@ if(isprec){
   bctrunc <- TRUE
   bctrim  <- ptrim
   densfun <- akde
-} else {
-  ## just invert list nesting
-  datatobc <- renest(wind)
 
-  bctrunc <- FALSE
-  bctrim  <- NULL
-  densfun <- bkde
+} else {
+
+    if(istemp){
+        ## just invert list nesting
+        datatobc <- renest(wind)
+    } else {
+        ## dummy inner list to match temp structure as with prec
+        datatobc <- rapply(renest(wind), list, how="replace")
+    }
+
+    bctrunc <- FALSE
+    bctrim  <- NULL
+    if(stdname == "wind_speed"){ bctrim <- ptrim }
+    densfun <- bkde
 }
+
 
 
 ## bias-correct each window
@@ -170,17 +191,17 @@ if(saveslice){
   fixdata <- renest(fixdata)
 }
 
-
 ## rearrange back to sliced conformation
 if(isprec){
-  ## rezero data, get rid of the dummy inner list, and re-invert
-  rez <- rapply(fixdata, rezero, how="replace")  
-  bc <- renest(lapply(rez, function(x){lapply(x, unlist)}))
-} else {
-  ## just re-invert
-  bc <- renest(fixdata)
+    ## rezero data
+    fixdata <- rapply(fixdata, rezero, how="replace")
 }
-
+if(!istemp){
+    ## get rid of the dummy inner list
+    fixdata <- lapply(fixdata, function(x){lapply(x, unlist)})
+}
+## re-invert
+bc <- renest(fixdata)
 
 ## collate inner windows back into timeseries
 outdata <- mapply(unslice, bc, cwin, SIMPLIFY=FALSE)
