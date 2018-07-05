@@ -1,4 +1,4 @@
-utils::globalVariables(c("norm","mu","sigma","lambda","gamma"))
+utils::globalVariables(c("norm","mu","sigma","lambda","gamma", "mu2", "lower", "upper", "clip"))
 ## The overloaded use of @ involves non-standard evaluation that makes
 ## devtools::check() (or rather, codetools::checkUsagePackage()) think
 ## that the attribute names are undefined global variables.  Declaring
@@ -29,24 +29,25 @@ utils::globalVariables(c("norm","mu","sigma","lambda","gamma"))
 ##' bias.  The \code{shift} and \code{scale} arguments apply additive
 ##' and multiplicative adjustments, respectively, to the data.  The
 ##' \code{pscale} argument applies a multiplicative adjustment to the
-##' exponent used in power normalization.
+##' exponent used in the boxcox normalization.
 ##'
-##' The "power" transformation raises the data to an arbitrary power.
-##' When undoing this transformation, the data is first floored at
-##' zero to avoid problems with negative inputs.
+##' The "boxcox" transformation raises the data to an arbitrary power
+##' (lambda).  When undoing this transformation, if lambda is
+##' non-zero, the data is first floored at zero to avoid problems with
+##' negative inputs.
 ##' 
 ##' @param x A normalized vector
 ##' 
 ##' @param shift An adjustment factor added to the data during
-##' denormalization.  Adjusts mu or gamma, respectively, for "zscore"
-##' and "boxcox" normalization.
+##' denormalization.  Adjusts mu or gamma, respectively, for the
+##' "zscore" and "boxcox" normalizations.
 ##'
 ##' @param scale A multiplicative adjustment factor applied to the
-##' denormalized data.  Only used for the "zscore" normalization.
-##' Adjusts the variance of zscore-normalized data.
+##' denormalized data.  Adjusts sigma or mu2, respectively, for the
+##' "zscore" and "scale" normalizations.
 ##'
 ##' @param pscale A multiplicative adjustment factor applied to the
-##' exponent when denormalizing boxcox-transformed data.
+##' exponent (lambda) when denormalizing the "boxcox" normalization.
 ##' 
 ##' @examples
 ##'
@@ -85,12 +86,8 @@ denormalize <- function(x, shift=0, scale=1, pscale=1){
 
     norm <- x@norm
     
-    if(!norm %in% c("zscore", "boxcox", "log", "identity")){
+    if(!norm %in% c("zscore", "boxcox", "log", "scale", "range", "identity")){
         stop(paste("unknown normalization",norm))
-    }
-
-    if(norm == "log"){
-        result <- exp(x)
     }
 
     if(norm == "zscore"){
@@ -118,6 +115,34 @@ denormalize <- function(x, shift=0, scale=1, pscale=1){
         result <- result - out.gamma
 	result@gamma  <- NULL
 	result@lambda <- NULL
+    }
+
+    if(norm == "log"){
+        result <- exp(x)
+    }
+
+    if(norm == "scale"){
+        out.mu <- x@mu2 * scale
+        result <- x * out.mu
+        if(x@clip){
+            if(out.mu < 0){
+                warning("denormalizing scaled data with mu2*scale negative and clipping on; all values will be zero.")
+            }
+            result[result < 0] <- 0
+        }
+        result@mu2  <- NULL
+        result@clip <- NULL
+    }
+
+    if(norm == "range"){
+        result <- x * (x@upper - x@lower) + x@lower
+        if(x@clip){
+            result[result < x@lower] <- x@lower
+            result[result > x@upper] <- x@upper
+        }
+        result@lower <- NULL
+        result@upper <- NULL
+        result@clip  <- NULL
     }
 
     if(norm=="identity"){
