@@ -2,7 +2,6 @@
 % Please edit documentation in R/slice.R
 \name{slice}
 \alias{slice}
-\alias{slice}
 \alias{subslice}
 \alias{unslice}
 \title{Climatological slicing of timeseries}
@@ -28,6 +27,13 @@ a different climatological window.}
 
 \item{split}{Whether to segment subsliced data by year.  Defaults
 to the \code{split} parameter of \code{how}.}
+}
+\value{
+a list of vectors, one for each climatological window.
+
+a list of vectors, one for each climatological window.
+
+a single timeseries vector.
 }
 \description{
 \code{slice}, \code{subslice}, and \code{unslice} are used to

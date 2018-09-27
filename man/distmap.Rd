@@ -6,7 +6,7 @@
 values.}
 \usage{
 distmap(x, y, densfun = KernSmooth::bkde, pgrid = ppoints(1000),
-  truncate = FALSE, na.rm = TRUE, ...)
+  truncate = FALSE, trim = NULL, na.rm = TRUE, ...)
 }
 \arguments{
 \item{x}{A vector of values whose distribution is to be mapped.}
@@ -28,6 +28,14 @@ estimates of the PDFs at the minimum value of the input data.
 This is useful for preventing the transfer function from
 generating negative values in the case of a variable bounded at
 zero like precipitation.  Defaults to FALSE.}
+
+\item{trim}{a function used to omit unwanted values when
+constructing the mapping. This is useful for preventing
+overfitting of the tails in heavy-tailed variables like
+precipitation by trimming very extreme values using a function
+like \code{\link{lof1d}} or \code{\link{chauvenet}}.  The function
+should take a vector of values as input and return the same vector
+with the unwanted values removed.  Defaults to NULL.}
 
 \item{na.rm}{Logical; if TRUE (default), remove NA values before
 constructing distribution mapping.}

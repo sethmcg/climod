@@ -2,7 +2,6 @@
 % Please edit documentation in R/unzero.R
 \name{unzero}
 \alias{unzero}
-\alias{unzero}
 \alias{rezero}
 \title{Remove precipitation zeros by setting them to NA}
 \usage{
@@ -31,10 +30,7 @@ and reinsert them from the arrays.
 
 It is not uncommon for precipitation data to have small negative
 values after bias correction.  By default \code{rezero} also sets
-those values to zero when returning NA values back to zero.  If
-the input has an attribute named "uncorrectable", \code{rezero}
-will use it to index into the array and set those values to NA
-afterwards.
+those values to zero when returning NA values back to zero.
 }
 \examples{
 

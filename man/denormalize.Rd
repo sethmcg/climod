@@ -10,15 +10,15 @@ denormalize(x, shift = 0, scale = 1, pscale = 1)
 \item{x}{A normalized vector}
 
 \item{shift}{An adjustment factor added to the data during
-denormalization.  Adjusts mu or gamma, respectively, for "zscore"
-and "boxcox" normalization.}
+denormalization.  Adjusts mu or gamma, respectively, for the
+"zscore" and "boxcox" normalizations.}
 
 \item{scale}{A multiplicative adjustment factor applied to the
-denormalized data.  Only used for the "zscore" normalization.
-Adjusts the variance of zscore-normalized data.}
+denormalized data.  Adjusts sigma or mu2, respectively, for the
+"zscore" and "scale" normalizations.}
 
 \item{pscale}{A multiplicative adjustment factor applied to the
-exponent when denormalizing boxcox-transformed data.}
+exponent (lambda) when denormalizing the "boxcox" normalization.}
 }
 \description{
 Reverses the transformation applied to a vector of values by the
@@ -42,11 +42,12 @@ supplied to adjust the normalization parameters to compensate for
 bias.  The \code{shift} and \code{scale} arguments apply additive
 and multiplicative adjustments, respectively, to the data.  The
 \code{pscale} argument applies a multiplicative adjustment to the
-exponent used in power normalization.
+exponent used in the boxcox normalization.
 
-The "power" transformation raises the data to an arbitrary power.
-When undoing this transformation, the data is first floored at
-zero to avoid problems with negative inputs.
+The "boxcox" transformation raises the data to an arbitrary power
+(lambda).  When undoing this transformation, if lambda is
+non-zero, the data is first floored at zero to avoid problems with
+negative inputs.
 }
 \examples{
 

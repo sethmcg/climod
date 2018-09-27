@@ -4,7 +4,7 @@
 \alias{as.matrix.list}
 \title{Converts a list to a matrix, padding vectors with NA to fit.}
 \usage{
-as.matrix.list(x, element = NULL, ...)
+\method{as.matrix}{list}(x, element = NULL, ...)
 }
 \arguments{
 \item{x}{list to be converted to a matrix}

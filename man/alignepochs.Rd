@@ -13,7 +13,7 @@ alignepochs(time, epoch = "days since 1950-01-01")
 \item{epoch}{A CF time@units string}
 }
 \value{
-A time variable with adjusted epoch and
+A time variable with adjusted epoch and offsets
 }
 \description{
 The CF metadata standard requires a netCDF time coordinate

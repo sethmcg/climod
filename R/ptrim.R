@@ -5,7 +5,7 @@
 ##' object) for precipitation tends to overfit the upper tails.  To
 ##' avoid this problem, it is useful in this case to trim extreme
 ##' values from the input datasets. This function discards the top
-##' \code{p}% of values from the input vector.
+##' \code{p}\% of values from the input vector.
 ##'
 ##' This function uses the \code{stats::quantile} function to find a
 ##' cutoff value.  Because any quantile with probability less than 1
@@ -14,7 +14,7 @@
 ##'
 ##' @param x a vector of values.
 ##'
-##' @param p the percentage of values to discard.  Defaults to 1%.
+##' @param p the percentage of values to discard.  Defaults to 1\%.
 ##'
 ##' @param ... further arguments passed on to \code{stats::quantile}
 ##'

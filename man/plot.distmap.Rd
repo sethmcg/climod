@@ -8,10 +8,10 @@ and transfer function.}
 \method{plot}{distmap}(x, lim = range(c(x$xq, x$yq)), pscale = 0.2,
   xmap = quantile(x), map.args = list(col = "red", lty = 2),
   identity.args = list(), rug.args = NULL, pdf.args = NULL,
-  transfer.args = list(col = "red", lwd = 2), skip = NULL, xlim = lim,
-  ylim = lim, pxscale = pscale, pyscale = pscale, pxlim = c(min(ylim),
-  min(ylim) + diff(ylim) * pxscale), pylim = c(min(xlim), min(xlim) +
-  diff(xlim) * pyscale), ...)
+  transfer.args = list(col = "red", lwd = 2), skip = NULL,
+  xlim = lim, ylim = lim, pxscale = pscale, pyscale = pscale,
+  pxlim = c(min(ylim), min(ylim) + diff(ylim) * pxscale),
+  pylim = c(min(xlim), min(xlim) + diff(xlim) * pyscale), ...)
 }
 \arguments{
 \item{x}{An object of class 'distmap'.}

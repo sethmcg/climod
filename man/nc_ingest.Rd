@@ -15,8 +15,9 @@ be opened and ingested.}
 addition to data variables.  (Defaults to FALSE.)}
 }
 \value{
-A list containing the variables in the netcdf file with
-named dimensions and attributes as in the netcdf file.
+An object of class 'nc' containing the variables in the
+netcdf file with named dimensions and attributes as in the netcdf
+file.
 }
 \description{
 This function reads in all the variables in a netCDF file, names

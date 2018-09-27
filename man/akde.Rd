@@ -5,8 +5,8 @@
 \title{This is a wrapper for the \code{\link[quantreg]{akj}} adaptive
 kernel density estimation routine.}
 \usage{
-akde(x, n = 2 * length(x), extend = 3 * stats::bw.nrd(x), min.x = min(x) -
-  extend, max.x = max(x) + extend)
+akde(x, n = 2 * length(x), extend = 3 * stats::bw.nrd(x),
+  min.x = min(x) - extend, max.x = max(x) + extend)
 }
 \arguments{
 \item{x}{The data to estimate a PDF for.}
