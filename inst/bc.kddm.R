@@ -156,7 +156,7 @@ if(isprec){
   datatobc <- rapply(renest(ddu), list, how="replace")
 
   bctrunc <- TRUE
-  bctrim  <- ptrim
+  bctrim  <- function(x){ptrim(x, p=0.05)}
   densfun <- akde
 
 } else {
@@ -180,7 +180,8 @@ if(isprec){
 ## bias-correct each window
 
 fixdata <- lapply(datatobc, biascorrect, norm, dmap=saveslice,
-                  truncate=bctrunc, trim=bctrim, densfun=densfun)
+                  truncate=bctrunc, trim=bctrim, densfun=densfun,
+                  minobs=300)
 
 
 if(saveslice){
