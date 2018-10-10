@@ -14,6 +14,9 @@
 ##' whether the \code{cslice} object is segmented (i.e., called with
 ##' \code{split=TRUE}).  The \code{subslice} function also accepts a
 ##' \code{split} argument to override the default.
+##'
+##' If provided with a matrix or array of values instead of a vector,
+##' these functions operate on the first dimension.
 ##' 
 ##' @param x A vector of values to be sliced into windows.
 ##'
@@ -37,6 +40,30 @@
 NULL
 
 
+########################
+## helper functions for dealing with array data:
+
+ndim <- function(x){ length(dim(x)) }
+
+## Metafunction that returns a function to index first dimension of x
+indexfn <- function(x){
+    if(ndim(x) < 2) {
+        ## special case for 1-dim x since dim() of a vector is NULL
+        function(i, ...){x[i]}
+    } else if (ndim(x) == 2) {
+        ## special case for 2 dimensions since `[` is faster than do.call()
+        function(i, ...){x[i,]}
+    } else {
+        ## index first dimension of x, regardless of how many there are
+        function(i, ...){do.call("[",list(x,i,lapply(dim(x)[-1],seq)))}
+    }    
+}
+
+ixfn <- function(i, x){ indexfn(x)(i) }
+
+
+
+########################
 ##' @rdname slice
 ##' @usage slice(x, how, outer=FALSE)
 ##'
@@ -50,10 +77,45 @@ slice <- function(x, how, outer=FALSE){
     } else {
         index <- how$inner
     }
-    rapply(index, function(i){return(x[i])}, how="replace")
+    rapply(index, indexfn(x), how="replace")
 }
 
 
+
+########################
+## More helper functions
+
+## Depth of a nested list
+depth <- function(obj, tally=0){
+    if(!is.list(obj)){
+        return(tally)
+    } else {
+        return(max(unlist(lapply(obj, depth, tally=tally+1))))    
+    }
+}
+
+## Converts a list of arrays into a single array
+desegmentize <- function(x){
+    if(ndim(x[[1]]) < 2) {
+        do.call(c, x)
+    } else {
+        do.call(rbind, x)
+    }
+}
+
+
+
+
+## Splits an array into a list of arrays at bdys
+segmentize <- function(x, bdy){
+    indf <- indexfn(x)
+    lower <- c(0, bdy)+1
+    upper <- c(bdy, ifelse(ndim(x) > 1, dim(x)[1], length(x)))
+    mapply(function(a,b){indf(a:b)}, lower, upper, SIMPLIFY=FALSE)
+}
+
+
+########################
 ##' @rdname slice
 ##' @usage subslice(s, how, split=how$params$split)
 ##'
@@ -61,30 +123,45 @@ slice <- function(x, how, outer=FALSE){
 ##' 
 ##' @export
 
-## Subslice gets a split argument to override the default because its
-## most common use case is being called as part of unslice.  Since
+## Subslice gets a "split" argument to override the default because
+## its most common use case is being called as part of unslice.  Since
 ## unslice needs the inner slice to be unsegmented, it would be
 ## pointless to desegementize the data in order to subslice, resegment
 ## it to return, and then immediately desegmentize it again in the
 ## calling function.
 
 subslice <- function(s, how, split=how$params$split){
-    ## Desegmentize to subslice, then resegmentize if needed
     iind <- lapply(how$inner, unlist)
     oind <- lapply(how$outer, unlist)
     inout <- mapply(match, iind, oind, SIMPLIFY=FALSE)
-    s <- mapply('[', lapply(s, unlist), inout, SIMPLIFY=FALSE)
+
+    ## desegmentize if needed
+    if(depth(s) > 1) { s <- lapply(s, desegmentize) }
+
+    ## subslicing
+    s <- mapply(ixfn, inout, s, SIMPLIFY=FALSE)
+
+    ## resegmentize if needed
     if(split){
-        ibdy <- lapply(iind, function(x){which(diff(x) > 1)})
-        for(i in 1:length(s)){
-            s[[i]] <- mapply(function(a,b){iind[a:b]}, SIMPLIFY=FALSE,
-                             c(0,ibdy)+1, c(ibdy,length(s)))
-        }
-    }
+        ibdy <- lapply(inout, function(x){which(diff(x) > 1)})
+        s <- mapply(segmentize, s, ibdy)
+    }    
     return(s)
 }
 
+########################
+## Yet more helper functions
 
+len <- function(x){
+    if(ndim(x) < 2){
+        length(x)
+    } else {
+        dim(x)[1]
+    }
+}
+
+
+########################
 ##' @rdname slice
 ##' @usage unslice(s, how)
 ##' 
@@ -92,22 +169,45 @@ subslice <- function(s, how, split=how$params$split){
 ##' 
 ##' @export
 
-unslice <- function(s, how){
-
-    ## Need desegmentized inner
-    iind <- lapply(how$inner, unlist)
+unslice <- function(s, how, template=NULL, odim=dim(template), onames=dimnames(template)){
     
     ## if s in an outer slice, convert it to an inner slice
-    if(identical(rapply(s, length, how="replace"),
-                 rapply(how$outer, length, how="replace"))){
+    if(identical(rapply(s, len, how="replace"),
+                 rapply(how$outer, len, how="replace"))){
         s <- subslice(s, how, split=FALSE)
     }
-    if(!identical(sapply(s, length), sapply(iind, length))){
+
+    ## desegmentize if needed
+    if (depth(how$inner) > 1){
+        iind <- lapply(how$inner, desegmentize)
+    } else {
+        iind <- how$inner
+    }
+    
+    if(!identical(sapply(s, len), sapply(iind, len))){
         stop("Sliced data lengths don't match cslice object")
     }
-    result <- c()
-    for(i in 1:length(s)){
-        result[iind[[i]]] <- s[[i]]
+    
+    ## easy case - vectors
+    if(length(odim) < 2){
+        result <- c()
+        for(i in 1:length(s)){
+            result[iind[[i]]] <- s[[i]]
+        }
+    } else {
+        ## matrices
+        result <- array(dim=odim, data=NA)
+        if (length(odim) == 2){
+            for(i in 1:length(s)){
+                result[iind[[i]],] <- s[[i]]
+            }
+            if(!is.null(onames)){
+                dimnames(result) <- onames
+            }
+        } else {
+            ## general arrays are hard and I'm tired
+            stop("unslicing arrays with dimension > 2 not supported yet.")
+        }
     }
     return(result)
 }
