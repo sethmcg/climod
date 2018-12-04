@@ -1,3 +1,5 @@
+## Multivariate bias correction script using Cannon's MBC package
+
 library(MBC)
 library(devtools)
 load_all("~/climod")
@@ -10,9 +12,6 @@ suppressMessages(library(ncdf4))
 ## Note: arguably, we should transform tasmax/tasmin to tasmed/dtr,
 ## with dtr=TRUE
 
-#rvar <- c(hurstmax=TRUE, pr=TRUE, rsds=FALSE, tas=FALSE, tasmax=FALSE,
-#        tasmin=FALSE, wss=TRUE)
-
 rvar <- c(huss=TRUE, prec=TRUE, rsds=FALSE, tmax=FALSE, tmin=FALSE,
           uas=FALSE, vas=FALSE)
 
@@ -24,20 +23,13 @@ scaling <- c(huss=1000, prec=1, rsds=1/10, tmax=1, tmin=1, uas=10, vas=10)
 
 #######
 
-# args <- c("var",
-#           "badjam/stn01/obs/AGMERRA_var.nc4",
-#           "badjam/stn01/raw/CORDEX44_NOAA-GFDL-GFDL-ESM2M_historical_r1i1p1_RCA4_var.nc4",
-#           "badjam/stn01/raw/CORDEX44_NOAA-GFDL-GFDL-ESM2M_rcp85_r1i1p1_RCA4_var.nc4",
-#           "test/CORDEX44_NOAA-GFDL-GFDL-ESM2M_historical_r1i1p1_RCA4_var_MBCn.nc4",
-#           "test/CORDEX44_NOAA-GFDL-GFDL-ESM2M_rcp85_r1i1p1_RCA4_var_MBCn.nc4"
-#           )
-
+# For testing
 args <- c("huss",
-          "/glade/scratch/mcginnis/mbcn/raw/huss.METDATA.NAM-44i/slice/x150/data.x150.y040.nc",
-          "/glade/scratch/mcginnis/mbcn/raw/huss.hist.CanESM2.RCA4.day.NAM-44i.raw/slice/x150/data.x150.y040.nc",
-          "/glade/scratch/mcginnis/mbcn/raw/huss.rcp85.CanESM2.RCA4.day.NAM-44i.raw/slice/x150/data.x150.y040.nc",
-          "/glade/scratch/mcginnis/mbcn/mbcn-METDATA/huss.hist.CanESM2.RCA4.day.NAM-44i.mbcn-METDATA/slice/x150/data.x150.y040.nc",
-          "/glade/scratch/mcginnis/mbcn/mbcn-METDATA/huss.rcp85.CanESM2.RCA4.day.NAM-44i.mbcn-METDATA/slice/x150/data.x150.y040.nc"
+          "mbcn/raw/huss.METDATA.NAM-44i/slice/x150/data.x150.y040.nc",
+          "mbcn/raw/huss.hist.CanESM2.RCA4.day.NAM-44i.raw/slice/x150/data.x150.y040.nc",
+          "mbcn/raw/huss.rcp85.CanESM2.RCA4.day.NAM-44i.raw/slice/x150/data.x150.y040.nc",
+          "mbcn/mbcn-METDATA/huss.hist.CanESM2.RCA4.day.NAM-44i.mbcn-METDATA/slice/x150/data.x150.y040.nc",
+          "mbcn/mbcn-METDATA/huss.rcp85.CanESM2.RCA4.day.NAM-44i.mbcn-METDATA/slice/x150/data.x150.y040.nc"
           )
 
 ## comment out this line for testing
