@@ -14,7 +14,7 @@
 ##'
 ##' @param x a vector of values.
 ##'
-##' @param p the percentage of values to discard.  Defaults to 1\%.
+##' @param p the percentage of values to discard.  Defaults to 5\%.
 ##'
 ##' @param ... further arguments passed on to \code{stats::quantile}
 ##'
@@ -30,7 +30,7 @@
 ##' print(quantile(x, p=0.9))
 ##' @export
 
-ptrim <- function(x, p=0.01, ...){
+ptrim <- function(x, p=0.05, ...){
   q <- quantile(x, probs=(1-p), ...)
   x[x < q]
 }

@@ -5,8 +5,7 @@ suppressMessages(library(KernSmooth))
 suppressMessages(library(ncdf4))
 suppressMessages(library(quantreg))
 
-## Call as: Rscript kddm.R var obs cur fut cout fout
-## (used to call with --vanilla but on cheyenne it can't find pkgs...)
+## Call as: Rscript bc.kddm.R var obs cur fut cout fout [Rout]
 
 
 # For testing

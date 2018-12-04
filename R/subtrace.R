@@ -37,6 +37,9 @@
 ##' limit in log space.  The lower limit is chosen so that it has the
 ##' same distance from the trace threshold as the upper limit in log
 ##' space.
+##'
+##' NOTE that this function uses random numbers!  (Via the
+##' \code{sample} function.)  Be sure to seed your RNG.
 ##' 
 ##' @param x A vector of values to substitute subtrace values on.
 ##' Units presumed to be mm by default values of other arguments.
