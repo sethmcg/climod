@@ -122,82 +122,13 @@ if(!all(oktime)){
 time <- lapply(time, `[[`, 1)
 
 
-
-
-#####################
-###  Normalize precip
-
-## Apply subtrace replacement & log norm to precip
-## Subtrace uses runif(); set RNG seed first
-
-rawprec <- rawdata$prec
-
-set.seed(222)
-rawdata$prec <- lapply(lapply(rawdata$prec, subtrace, gridscale=25), log)
-
-
-
-############################
-### Remove means and detrend
-
-## Need to do a broken-stick (continuous piecewise linear) regression
-## for model data or discontinuity between trends eats the climate
-## change signal.
-
-
-trend <- function(ocf, time){
-    result <- list()
-    result$obs <- predict(lm(ocf$obs ~ time$obs))
-
-    knot <- mean(max(time$cur), min(time$fut))
-    t1 <- c(time$cur, time$fut)
-    t2 <- pmax(t1 - knot, 0)
-    x <- c(ocf$cur, ocf$fut)
-    model <- lm(x ~ t1 + t2)
-
-    result$cur <- predict(model)[t1 <= knot]
-    result$fut <- predict(model)[t1 > knot]
-
-    return(result)
-}
-
-trends <- lapply(rawdata, trend, time)
-
-
-## Don't want to chain the trend calculation into the detrending
-## mapply below because we need to put the trends back when we're all
-## done.
-
-dtdata <- list()
-for(v in names(rawdata)){
-    dtdata[[v]] <- mapply(`-`, rawdata[[v]], trends[[v]], SIMPLIFY=FALSE)
-}
-
-
-## We also need a delta between obs and cur to subtract off when it's all done.
-## Figure out the overlap period:
-
-tstart  <- max(min(time$obs), min(time$cur))
-tfinish <- min(max(time$obs), max(time$cur))
-
-## This is not exact because of calendar issues, but good enough
-
-obsmask <- tstart <= time$obs & time$obs <= tfinish
-curmask <- tstart <= time$cur & time$cur <= tfinish
-
-delta <- c()
-for(v in vars){
-    delta[v] <- mean(trends[[v]]$cur[curmask]) - mean(trends[[v]]$obs[obsmask])
-}
-
-## remember, *subtract* delta, don't add it
-
+#### norm & detrending code moved from here
 
 
 ###################################
 ### Window data for bias correction
 
-indata <- dtdata
+#indata <- dtdata
 
 
 ### Set up moving windows
@@ -219,19 +150,19 @@ Nwin <- 36
 
 cwin <- lapply(time, cslice, outer=mwinwidth, num=Nwin, split=FALSE)
 
+wintime <- renest(mapply(slice, time, cwin, MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE))
 
 ## window data using outer window
 windata <- list()
 for(v in vars){
-    windata[[v]] <- renest(mapply(slice, indata[[v]], cwin,
-                                 MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE))
+#    windata[[v]] <- renest(mapply(slice, indata[[v]], cwin, MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE))
+    windata[[v]] <- renest(mapply(slice, rawdata[[v]], cwin, MoreArgs=list(outer=TRUE), SIMPLIFY=FALSE))
 }
 
 
 
 ########################
 ### Bias correction code
-
 
 ### Random rotation matrix of rank k
 ### Adapted from Alex Cannon's MBC library under GPL
@@ -258,13 +189,9 @@ rotate <- function(dlist, R){
 }
 
 
-## copula bias correction for innermost loop
-cbc <- function(ocf, ...){
-    mapping <- distmap(addtails(ocf$cur), addtails(ocf$obs), ...)
-    result <- lapply(ocf, function(x){predict(mapping, x)})
-    result$obs <- ocf$obs
-    return(result)
-}
+## rank tranformation for marginal-copula decomposition
+rankxform <- function(x){rank(x)/(length(x)+1)}
+
 
 ## add tails to "pin" the transfer function outside the [0,1] copula
 ## range.  This is bit of a hack; the really right thing to do is to
@@ -281,40 +208,86 @@ addtails <- function(x, lower=c(-1,0), upper=c(1,2)){
 }
 
 
-## rank tranformation for marginal-copula decomposition
-rankxform <- function(x){rank(x)/(length(x)+1)}
+## copula bias correction for innermost loop
+cbc <- function(ocf, ...){
+    mapping <- distmap(addtails(ocf$cur), addtails(ocf$obs), ...)
+    result <- lapply(ocf, function(x){predict(mapping, x)})
+    result$obs <- ocf$obs
+    return(result)
+}
 
 
-## We do a marginal-copula decomposition using a rank transformation,
-## bias-correct the copula alone using Pitie's nPDF-t algorithm, then
-## convert the corrected copula values back through the observed
-## marginals.  Conceptually, this basically injects the entire npdft
-## rotation sequence into the middle of the KDDM mapping.
+## Pitie's n-pdft algorithm
+npdft <- function(copula, niter=600, verbose=TRUE, progress=10, ...){
+#npdft <- function(copula, niter=10, verbose=TRUE, progress=1, vnames=vars, ...){
 
-gyrofix <- function(bcdata, niter=600, ...){
+    k <- length(vnames)
 
-    k <- length(vars)
-
-    copula <- rapply(bcdata, rankxform, how="replace")
-
+    x <- copula
+    
     for(i in 1:niter){
         ## random rotation matrix
         R <- randrot(k)
         
         ## rotate copula
-        rcop <- lapply(copula, rotate, R)
+        y <- lapply(x, rotate, R)
         
         ## bias-correct rotated copula
-        bcrcop <- renest(lapply(renest(rcop), cbc, ...))
+        z <- renest(lapply(renest(y), cbc, ...))
         
         ## undo rotation
-        copula <- lapply(bcrcop, rotate, t(R))
+        x <- lapply(z, rotate, t(R))
         
-        if(i %% 10 ==0 ){cat(".")}
+        if(verbose && i %% progress == 0 ){cat(".")}
     }
 
-    copula <- lapply(copula, function(x){names(x) <- vars; x})
+    lapply(x, function(xx){names(xx) <- vnames; xx})
+}
 
+
+
+
+## Calculate trends for obs, cur, & fut.  Need to do a broken-stick
+## (continuous piecewise linear) regression for model data or
+## discontinuity between trends eats the climate change signal.
+
+ocftrend <- function(ocf, time){
+    result <- list()
+    result$obs <- predict(lm(ocf$obs ~ time$obs))
+
+    ## fragile; should check that cur & fut are properly aligned
+    knot <- mean(max(time$cur), min(time$fut))
+    t1 <- c(time$cur, time$fut)
+    t2 <- pmax(t1 - knot, 0)
+    x <- c(ocf$cur, ocf$fut)
+    model <- lm(x ~ t1 + t2)
+
+    result$cur <- predict(model)[t1 <= knot]
+    result$fut <- predict(model)[t1 > knot]
+
+    return(result)
+}
+
+
+
+
+## Copula gyration bias correction: Do a marginal-copula decomposition
+## using a rank transformation, bias-correct the copula alone using
+## Pitie's nPDF-t algorithm, then convert the corrected copula values
+## back through the observed marginals.  Conceptually, this basically
+## injects the entire npdft rotation sequence into the middle of the
+## KDDM mapping.
+
+## Input data.ocf.mv if a nested list with ocf outside, variables inside
+
+cogyro <- function(data.ocf.mv, ...){
+
+    k <- length(vars)
+
+    copula <- rapply(data.ocf.mv, rankxform, how="replace")
+
+    copula <- npdft(copula, ...)
+    
     ## Some contraction happens in the n-pdft process; fix it by
     ## reapplying the rank transformation.
 
@@ -330,93 +303,163 @@ gyrofix <- function(bcdata, niter=600, ...){
     result <- list()
     for(v in vars){
         bctrim <- ifelse(v == "prec", ptrim, identity)
-        mapping <- distmap(copula$obs[[v]], bcdata$obs[[v]], trim=bctrim)
+        mapping <- distmap(copula$obs[[v]], data.ocf.mv$obs[[v]], trim=bctrim)
         result[[v]] <- lapply(renest(copula)[[v]], function(x){predict(mapping, x)})
-        result[[v]]$obs <- bcdata$obs[[v]]
+        result[[v]]$obs <- data.ocf.mv$obs[[v]]
     }
 
     result <- renest(result)
 }
 
 
+
+
+
+## multivariate bias correction
+
+## data.mv.ocf is a nested list with variables outer, ocf inner. Time is ocf.
+
+mvbc <- function(data.mv.ocf, time, gridscale=25, ...){
+
+    vars <- names(data.mv.ocf)
+
+    ## save the original for later
+    praw <- data.mv.ocf$prec
+    
+    ## Apply subtrace replacement & log norm to precip
+    ## Subtrace uses runif(); set RNG seed first
+    data.mv.ocf$prec <- lapply(data.mv.ocf$prec, subtrace, gridscale=gridscale)
+    data.mv.ocf$prec <- lapply(data.mv.ocf$prec, log)
+
+    ## Calculate trend vectors
+    trends <- lapply(data.mv.ocf, ocftrend, time)    
+
+    ## Detrend data.  (Note: calculating the trend doesn't get folded
+    ## into removing it, because we need to put it back at the end of
+    ## the bias correction.
+
+    dtdata <- list()
+    for(v in vars){
+        dtdata[[v]] <- mapply(`-`, data.mv.ocf[[v]], trends[[v]], SIMPLIFY=FALSE)
+    }
+
+    ## Do multivariate copula gyration bias correction
+    bcdata <- renest(cogyro(renest(dtdata), ...))
+
+
+    ## calculate bias deltas beween obs and cur trends.  
+
+    ## Figure out the overlap period:
+    tstart  <- max(min(time$obs), min(time$cur))
+    tfinish <- min(max(time$obs), max(time$cur))
+
+    ## This is not exact because of calendar issues, but good enough for now
+    obsmask <- tstart <= time$obs & time$obs <= tfinish
+    curmask <- tstart <= time$cur & time$cur <= tfinish
+
+    ## calculate bias delta
+    delta <- c()
+    for(v in vars){
+        delta[v] <- mean(trends[[v]]$cur[curmask]) - mean(trends[[v]]$obs[obsmask])
+    }
+
+    ## remember, *subtract* delta, don't add it    
+
+    ## retrend data & subtract trend bias
+
+    redata <- list()
+    for(v in vars){
+        redata[[v]] <- mapply(`+`, bcdata[[v]], trends[[v]], SIMPLIFY=FALSE)
+        for(p in c("cur","fut")){
+            redata[[v]][[p]] <- redata[[v]][[p]] - delta[v]
+        }
+        redata[[v]]$obs <- data.mv.ocf[[v]]$obs
+    }
+
+    ## final fixup steps    
+    fixdata <- redata
+
+    ## ensure that rsds & huss are non-negative
+    fixdata$huss <- lapply(fixdata$huss, pmax, 0)
+    fixdata$rsds <- lapply(fixdata$rsds, pmax, 0)
+
+    
+    ## Fix up precip, which takes extra work    
+    p <- fixdata$prec
+    
+    ## apply trace threshold to get wet/dry proportions right
+    traceval <- p$obs@traceval
+
+    ## percentage of non-trace precip in obs
+    pwet <- sum(praw$obs >= traceval) / length(praw$obs)
+    
+    
+    ## do a final bias-correction pass applied only to non-trace values
+    
+    ## bc mapping for non-trace-precip
+    ntp <- lapply(p, function(x){x[rank(x) > pwet*length(x)]})
+    pmapping <- distmap(ntp$cur, ntp$obs, trim=ptrim)
+    
+    ## we don't care if it changes sub-trace values, because we're
+    ## about to discard them.  prec$obs also gets mangled, but we
+    ## overwrite it down below.
+    fixdata$prec <- lapply(fixdata$prec, function(x){predict(pmapping, x)})
+    
+    ## undo log
+    fixdata$prec <- lapply(fixdata$prec, exp)
+    
+    ## retrace
+    fixdata$prec <- lapply(fixdata$prec, function(x){x[x < traceval] <- 0; x})
+
+    ## put obs back to original
+    fixdata$prec$obs <- praw$obs
+    
+    ## [if this doesn't work, use ptrace, subtract zero, add traceval]
+    
+    ## scale mean precip
+    pmean <- lapply(fixdata$prec, mean)
+    pscale <- pmean$obs / pmean$cur
+    fixdata$prec$cur <- fixdata$prec$cur * pscale
+    fixdata$prec$fut <- fixdata$prec$fut * pscale
+
+    ## done!
+    return(fixdata)
+}
+
+
+
+
 #########################
 ### Apply bias-correction
 
-## reorder to [Nwin, ocf, vars]
-datatobc <- lapply(renest(windata), renest)
+## reorder to [Nwin, vars, ocf]
+datatobc <- renest(windata)
+
+
+## set RNG seed; used by subtrace() and cogyro() within mvbc()
+set.seed(222)
 
 
 ## apply bias-corrections by window
-fixdata <- list()
+bcdata <- list()
 for(i in 1:Nwin){
     cat(i)
-    fixdata[[i]] <- gyrofix(datatobc[[i]], densfun=bkde)
+    bcdata[[i]] <- mvbc(datatobc[[i]], wintime[[i]], densfun=bkde)
     cat("\n")
 }
 
 
 ## rearrange and collate inner windows back into timeseries
-unwindata <- renest(lapply(fixdata, renest))
-bcndata <- list()
+unwindata <- renest(bcdata)
+outdata <- list()
 for(v in vars){
-    bcndata[[v]] <- mapply(unslice, renest(unwindata[[v]]), cwin, SIMPLIFY=FALSE)
+    outdata[[v]] <- mapply(unslice, renest(unwindata[[v]]), cwin, SIMPLIFY=FALSE)
 }
 
-
-##########################################
-###  Retrend, denormalize, and fix up data
-
-## retrend data & apply delta
-
-redata <- list()
-for(v in vars){
-    redata[[v]] <- mapply(`+`, bcndata[[v]], trends[[v]], SIMPLIFY=FALSE)
-    for(p in c("cur","fut")){
-        redata[[v]][[p]] <- redata[[v]][[p]] - delta[v]
-    }
-}
-
-
-
-## Need a final bias-correction pass applied only to non-trace precip
-
-fixdata <- redata
-
-traceval <- indata$prec$obs@traceval
-
-logtrace <- log(traceval)
-
-p <- redata$prec
-
-## percentile of non-trace precip in obs
-ptrace <- min(which(sort(p$obs) > logtrace)) / length(p$obs)
-
-## Non-trace-precip
-ntp <- lapply(p, function(x){x[rank(x) > ptrace*length(x)]})
-
-pmapping <- distmap(ntp$cur, ntp$obs, trim=ptrim)
-
-fixdata$prec <- lapply(fixdata$prec, function(x){predict(pmapping, x)})
-fixdata$prec$obs <- redata$prec$obs
-
-
-## Retrace precip and ensure other values are physical
-
-retrace <- function(x, traceval){
-    x <- exp(x)    
-    x[x < traceval] <- 0
-    x
-}
-
-outdata <- fixdata
-
-outdata$huss <- lapply(outdata$huss, pmax, 0)
-outdata$rsds <- lapply(outdata$rsds, pmax, 0)
-outdata$prec <- lapply(outdata$prec, retrace, indata$prec$obs@traceval)
 
 save.image("testing.Rdata")
 
-stop()
+#stop()
 
 #########################
 ### Write results to file
