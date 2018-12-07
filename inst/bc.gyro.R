@@ -20,7 +20,7 @@ args <- c("huss",
           )
 
 ## comment out this line for testing
-#args <- commandArgs(trailingOnly=TRUE)
+args <- commandArgs(trailingOnly=TRUE)
 
 
 ####################
