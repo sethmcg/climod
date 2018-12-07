@@ -218,7 +218,7 @@ cbc <- function(ocf, ...){
 
 
 ## Pitie's n-pdft algorithm
-npdft <- function(copula, niter=600, verbose=TRUE, progress=10, ...){
+npdft <- function(copula, niter=600, verbose=TRUE, progress=10, vnames=vars, ...){
 #npdft <- function(copula, niter=10, verbose=TRUE, progress=1, vnames=vars, ...){
 
     k <- length(vnames)
