@@ -15,24 +15,6 @@ vars <- c("huss", "prec", "uas", "vas")
 ## png = name of output file for plotted figure
 ## txt = name of output file for plain-text table of metrics
 
-#args <- c("flux rcp85 MPI-ESM-LR RegCM4 birmingham",
-#          "data/obs/prec.METDATA.44i.birmingham.nc",
-#          "data/gyro/prec.hist.MPI-ESM-LR.RegCM4.day.NAM-44i.gyro.birmingham.nc",
-#          "data/gyro/prec.rcp85.MPI-ESM-LR.RegCM4.day.NAM-44i.gyro.birmingham.nc",
-#          "test.flux.png",
-#          "prec",
-#          "test.flux.txt"
-#          )
-
-#args <- c("flux rcp85 MPI-ESM-LR RegCM4 birmingham",
-#          "data/obs/prec.METDATA.44i.birmingham.nc",
-#          "data/raw/prec.hist.MPI-ESM-LR.RegCM4.day.NAM-44i.raw.birmingham.nc",
-#          "data/raw/prec.rcp85.MPI-ESM-LR.RegCM4.day.NAM-44i.raw.birmingham.nc",
-#          "test.flux.png",
-#          "prec",
-#          "test.flux.txt"
-#          )
-
 args <- c("flux rcp85 MPI-ESM-LR RegCM4 birmingham",
           "data/obs/prec.METDATA.44i.birmingham.nc",
           "data/kddm/prec.hist.MPI-ESM-LR.RegCM4.day.NAM-44i.kddm.birmingham.nc",
@@ -116,25 +98,14 @@ for(r in c("obs","cur","fut")){
     }
 }
 
-## ordered factor to make sorting happen right
+## ordered factor to make sorting happen correctly
 df$run <- factor(df$run, levels=c("obs", "cur", "fut"))
 
 uflux <- aggregate(uflux ~ window * run * wetday, df, mean, na.rm=TRUE)
 vflux <- aggregate(vflux ~ window * run * wetday, df, mean, na.rm=TRUE)
 
-# uflux$dir <- "u"
-# vflux$dir <- "v"
-# 
-# ## this is awkward enough that I'm thinking there must be a less
-# ## roundabout way to approach this whole situation...
-# 
-# colnames(uflux) <- gsub("uflux","flux",colnames(uflux))
-# colnames(vflux) <- gsub("vflux","flux",colnames(vflux))
-# 
-# flux <- rbind(uflux, vflux)
-# 
 
-## convert from long to wide for matplot
+## smooth and convert from long to wide for matplot
 library(reshape)
 
 library(zoo)
@@ -148,6 +119,19 @@ u <- lapply(cast(uflux, window ~ wetday + run)[,-1], smooth)
 v <- lapply(cast(vflux, window ~ wetday + run)[,-1], smooth)
 
 
+## Ugh, gross.  There must be a better way to do this
+
+wd <- list(wet=list(), dry=list())
+
+flux <- list(u=wd,v=wd)
+
+flux$u$wet <- u[4:6]
+flux$v$wet <- v[4:6]
+flux$u$dry <- u[1:3]
+flux$v$dry <- v[1:3]
+
+flux <- lapply(lapply(lapply(flux, renest), `names<-`, c("obs","cur","fut")), renest)
+
 
 
 ## plotting
@@ -157,8 +141,15 @@ lmap <- rep(c(2,1), each=3)
 
 rg <- c(-1,1)*max(abs(unlist(c(u,v))))
 
-dev.new()
-par(mfrow=c(2,2))
+png(outfile, units="in", res=120, width=7, height=7)
+
+par(mfrow=c(2,2), oma=c(0,0,3,0), mgp=c(2,1,0), mar=c(3.5,3.5,3,1.5))
+
+for(dir in c("u","v")){
+    for(damp in c("wet","dry"){
+    }
+}
+
 matplot(as.matrix(u[4:6]), type="l", col=cmap, lty=1, ylim=rg, lwd=2, main="u wet" )
 matplot(as.matrix(v[4:6]), type="l", col=cmap, lty=1, ylim=rg, lwd=2, main="v wet" )
 matplot(as.matrix(u[1:3]), type="l", col=cmap, lty=1, ylim=rg, lwd=2, main="u dry" )
@@ -167,22 +158,6 @@ matplot(as.matrix(v[1:3]), type="l", col=cmap, lty=1, ylim=rg, lwd=2, main="v dr
 
 
 stop()
-
-
-# positions for month labels
-mons <- seq(12)*30-15
-umon <- sapply(u, `[`, mons)
-vmon <- sapply(v, `[`, mons)
-moname <- c("J","F","M","A","M","J","J","A","S","O","N","D")
-pos <- c(4, 4, 3, 3, 3, 3, 2, 3, 3, 3, 3, 3)
-
-
-matplot(u, v, type="l", col=cmap, lty=lmap, xlim=rg, ylim=rg, lwd=2 )
-
-for(i in 4:6){
-    points(x=umon[,i], y=vmon[,i], col=cmap[i-3], pch=16)
-    text(x=umon[,i], y=vmon[,i], col=cmap[i-3], labels=moname, pos=pos)
-}
 
 abline(v=0, h=0, col="gray")
 
@@ -201,78 +176,6 @@ metrics <- data.frame(infile = "dummy", period="seas", analysis="joint",
 png(outfile, units="in", res=120, width=10, height=7)
 
 #par(mfrow=c(2,2), oma=c(0,0,3,0), mgp=c(2,1,0), mar=c(3.5,3.5,3,1.5))
-#
-#for (s in seas){
-#
-#  sd <- jsdata[[s]]
-#
-#  mplot(sd, type="n", x="prec", y="temp", main=s, xlab=punits, ylab=tunits)
-#
-#  ## freezing line
-#  abline(h=0, col="gray")
-#
-#  for(i in names(sd)){
-#    d <- sd[[i]]
-#  
-#    ## gridded 2D density estimate
-#    gf <- kde2d(d$prec, d$temp, lims=par("usr"))
-#
-#    
-#    ## find contour levels containing 95% and 50% of total 2D-PDF AUC
-#    ## (Ordering outer to inner makes plotting outliers easier.)  
-#    plev <- c(0.95, 0.5)
-#  
-#    sz <- sort(gf$z)
-#    auc <- sum(sz)
-#    clev <- sz[findInterval((1-plev)*auc, cumsum(sz))]
-#
-#    
-#    ## plot contours
-#    contour(gf, levels=clev, drawlabels=FALSE,
-#          lwd=seq(length(plev)), col=cmap[i], add=TRUE)
-#
-#    
-#    ## add mode point
-#    imode <- which(gf$z == max(sz), arr.ind=TRUE)
-#    modept <- list(x=gf$x[imode[1]], y=gf$y[imode[2]])
-#    points(modept$x, modept$y, pch=19, col=cmap[i], cex=1.5)
-#    ## TODO: change mode point to something like 2D Tukey median
-#    
-#  
-#    ## plot individual points outside 90% contour
-#    ## sp::point.in.polygon has nicer syntax, but crashes R
-#
-#    a90 <- conpolyarr(gf, clev[1])
-#      
-#    outpts <- !in.out(a90, cbind(d$prec, d$temp))
-#    points(d$prec[outpts], d$temp[outpts], col=cmap[i], pch=19, cex=0.2)
-#
-#    
-#    
-#    ## Calculate metrics
-#
-#    ## correlation between P & T  (Kendall's Tau)
-#    ktau <- cor(d$prec, d$temp, method="kendall")
-#
-#    ## % overlap between obs & mod q50 contours
-#    if (i == "obs"){
-#      ## As long as obs is first, this will carry over to later loops      
-#      grid <- as.matrix(expand.grid(gf$x, gf$y, KEEP.OUT.ATTRS=FALSE))
-#      oqa50 <- conpolyarr(gf, clev[2])      
-#      oq50io <- in.out(oqa50, grid)
-#    }
-#
-#    qa50 <- conpolyarr(gf, clev[2])
-#    q50io <- in.out(qa50, grid)
-#    q50over <- sum(q50io & oq50io) / sum(q50io)
-#
-#    ## Add to metrics df
-#    metrics <- rbind(metrics,
-#                     list(infiles$prec[i], s, "joint",
-#                          ktau, q50over,
-#                          modept$x, modept$y))
-#  }
-#}
 #
 #
 #mtext(paste(label, "joint PDFs"), line=1, outer=TRUE)
