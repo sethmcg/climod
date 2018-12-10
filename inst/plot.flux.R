@@ -15,7 +15,7 @@ vars <- c("huss", "prec", "uas", "vas")
 ## png = name of output file for plotted figure
 ## txt = name of output file for plain-text table of metrics
 
-args <- c("flux rcp85 MPI-ESM-LR RegCM4 birmingham",
+args <- c("rcp85 MPI-ESM-LR RegCM4 birmingham",
           "data/obs/prec.METDATA.44i.birmingham.nc",
           "data/kddm/prec.hist.MPI-ESM-LR.RegCM4.day.NAM-44i.kddm.birmingham.nc",
           "data/kddm/prec.rcp85.MPI-ESM-LR.RegCM4.day.NAM-44i.kddm.birmingham.nc",
@@ -27,7 +27,7 @@ args <- c("flux rcp85 MPI-ESM-LR RegCM4 birmingham",
 
 
 ## comment out this line for testing
-# args <- commandArgs(trailingOnly=TRUE)
+args <- commandArgs(trailingOnly=TRUE)
 
 label <- args[1]
 
@@ -145,61 +145,37 @@ png(outfile, units="in", res=120, width=7, height=7)
 
 par(mfrow=c(2,2), oma=c(0,0,3,0), mgp=c(2,1,0), mar=c(3.5,3.5,3,1.5))
 
+
+
 for(dir in c("u","v")){
-    for(damp in c("wet","dry"){
+    for(damp in c("wet","dry")){
+        matplot(as.matrix(flux[[dir]][[damp]]), type="l", col=cmap,
+                lty=1, lwd=2,  ylim=rg, main=paste(dir, damp),
+                xlab="day of year", ylab=paste(df$huss@units, df$uas@units))
+        abline(h=0, col="gray")
     }
 }
 
-matplot(as.matrix(u[4:6]), type="l", col=cmap, lty=1, ylim=rg, lwd=2, main="u wet" )
-matplot(as.matrix(v[4:6]), type="l", col=cmap, lty=1, ylim=rg, lwd=2, main="v wet" )
-matplot(as.matrix(u[1:3]), type="l", col=cmap, lty=1, ylim=rg, lwd=2, main="u dry" )
-matplot(as.matrix(v[1:3]), type="l", col=cmap, lty=1, ylim=rg, lwd=2, main="v dry" )
+mtext(paste(label, "wet/dry moisture flux"), line=1, outer=TRUE)
 
 
+## centered legend outside plots
 
-stop()
+par(fig=c(0,1,0,1), new=TRUE)
+plot(c(0,1), c(0,1), type="n", bty="n", xaxt="n", yaxt="n", ann=FALSE)
 
-abline(v=0, h=0, col="gray")
+legend(0.5, 0.5, bty="n", names(cmap), fill=cmap, xjust=0.5, yjust=0.65)
 
-## metrics?
+dev.off()
 
-stop()
+## metrics
 
-## Empty metrics dataframe
 
-metrics <- data.frame(infile = "dummy", period="seas", analysis="joint",
-                      ktau=0, q50over=0, modeP=0, modeT=0,
-                      stringsAsFactors=FALSE)
+## Metrics not implemented yet
 
-## plotting
+## Infile: virtual infile, varname = "qflux"
 
-png(outfile, units="in", res=120, width=10, height=7)
+## Metrics: (u,v) x (wet, dry) x mad
 
-#par(mfrow=c(2,2), oma=c(0,0,3,0), mgp=c(2,1,0), mar=c(3.5,3.5,3,1.5))
-#
-#
-#mtext(paste(label, "joint PDFs"), line=1, outer=TRUE)
-#
-### centered legend outside plots
-#
-#par(fig=c(0,1,0,1), new=TRUE)
-#plot(c(0,1), c(0,1), type="n", bty="n", xaxt="n", yaxt="n", ann=FALSE)
-#
-#nlev <- length(plev)
-#legend(0.5, 0.5, ncol=2, bty="n", seg.len=1, x.intersp=0.5, xjust=0.5, yjust=0.65,
-#       c(names(cmap), paste0(plev*100,"%"), "mode"),
-#       fill=c(cmap, rep(NA, nlev+1)), border=NA,
-#       lwd=c(NA,NA,NA,seq(nlev),NA),
-#       pch=c(rep(NA,nlev+3),19)
-#       )
-# 
-#dev.off()
-#
-#
-### write out metrics
-#
-#metrics <- metrics[-1,]
-#
-#write.table(format(metrics, trim=TRUE, digits=3),
-#            file=txtfile, quote=FALSE, sep="\t", row.names=FALSE)
-#
+## period = "ann", analysis = "flux"
+
