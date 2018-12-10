@@ -111,7 +111,7 @@ library(reshape)
 library(zoo)
 smooth <- function(x, k=31){
     N <- length(x)
-    y <- rollapply(c(x,x), FUN=mean, width=k, fill=NA)
+    y <- rollapply(c(x,x), FUN=mean, width=k, fill=NA, na.rm=TRUE)
     y[c(N+seq(k),(k+1):N)]
 }
 
@@ -135,9 +135,6 @@ flux <- lapply(lapply(lapply(flux, renest), `names<-`, c("obs","cur","fut")), re
 
 
 ## plotting
-
-cmap <- c(obs="black", cur="blue", fut="red")
-lmap <- rep(c(2,1), each=3)
 
 rg <- c(-1,1)*max(abs(unlist(c(u,v))))
 
@@ -168,6 +165,9 @@ legend(0.5, 0.5, bty="n", names(cmap), fill=cmap, xjust=0.5, yjust=0.65)
 
 dev.off()
 
+
+
+
 ## metrics
 
 
@@ -179,3 +179,41 @@ dev.off()
 
 ## period = "ann", analysis = "flux"
 
+
+## Quick extra plot of densities for AGU presentation
+
+# par(mfcol=c(2,2))
+# 
+# for(qf in c("uflux","vflux")){
+#     for(damp in c("wet","dry")){
+#         ocf <- list()
+#         for(p in c("obs","cur","fut")){
+#             mask <- df$wetday == damp & df$run == p
+#             ocf[[p]] <- df[mask, qf]
+#         }
+#         mplot(lapply(ocf, density), col = cmap, lwd=2, main=paste(damp, qf), type="l", lty=1, ylab="density", xlab="kg/kg * m/s")
+#         abline(v=0, col="gray")
+#         }
+#     }
+# }
+
+#
+# 
+# pdata <- data
+# pdata$prec <- lapply(pdata$prec, log)
+# pdata <- rapply(pdata, density, how="replace", na.rm=TRUE)
+# 
+# units <- lapply(lapply(data, `[[`, "obs"), attr, which="units")
+# units$prec <- paste("log", units$prec)
+# 
+# pdffile <- gsub("flux","dist",outfile)
+# png(pdffile, units="in", res=120, width=7, height=7)
+# 
+# par(mfrow=c(2,2))
+# 
+# for (v in names(data)){
+#     mplot(pdata[[v]], col=cmap, lwd=2, main=v, type="l", lty=1, ylab="density", xlab=units[[v]])
+# }
+# 
+# dev.off()
+# 
