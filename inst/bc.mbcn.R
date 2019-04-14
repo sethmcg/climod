@@ -1,10 +1,10 @@
 ## Multivariate bias correction script using Cannon's MBC package
 
-library(MBC)
-library(devtools)
-load_all("~/climod")
+suppressMessages(library(devtools))
+suppressMessages(load_all("~/climod"))
 suppressMessages(library(ncdf4))
-
+suppressMessages(library(zoo))
+suppressMessages(library(MBC))
 
 ## "ratio sequence": variables that are adjusted with multiplicative
 ## scaling instead of additive shifting.
@@ -81,6 +81,27 @@ bail <- function(iflist = infiles, oflist = outfiles){
 }
 
 
+NAfill <- function(x){
+  x <- zoo::na.approx(x, na.rm=FALSE)
+  x <- zoo::na.locf(x, na.rm=FALSE)
+  x <- zoo::na.locf(x, na.rm=FALSE, fromLast=TRUE)
+  if(any(is.na(x))){stop("NA values remain after filling")}
+  x
+}
+
+#  N <- length(x)
+#  if(is.na(x[1])) x[1] <- x[2]
+#  if(is.na(x[N])) x[N] <- x[N-1]
+#  bad <- is.na(x)
+#  if(any(bad)){
+#    x <- zoo::na.approx(x)
+#    ibad <- which(bad)
+#    x[ibad] <- (x[ibad-1] + x[ibad+1])/2
+#  }
+#  return(x)
+
+
+
 ingest <- function(files){
     result <- c()
     for(v in names(files)){
@@ -89,6 +110,7 @@ ingest <- function(files){
         x <- ncvar_get(nc, v)
         if(all(!is.finite(x)) || all(x == 0)){bail()}
         x <- x * scaling[v]
+        x <- NAfill(x)
         result <- cbind(result, x)
     }
     colnames(result) <- vars
