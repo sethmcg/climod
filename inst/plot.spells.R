@@ -58,96 +58,161 @@ time <- lapply(time, alignepochs, "days since 1950-01-01")
 wetdry <- lapply(data, function(x){c(x >= 1)})
 
 
-## calculate spell size and year/day from boolean timeseries x & time
-syd <- function(x, t){
+# spell-centric approach
+ 
+ ## calculate spell size and year/day from boolean timeseries x & time
+ syd <- function(x, t){
+     runs <- rle(x)
+ 
+     size <- runs$length
+     type <- factor(runs$values+1, labels=c("dry","wet"))
+     
+     istop  <- cumsum(runs$length)
+     istart <- c(1, head(istop+1,-1))
+     tmid <- c((t[istop] + t[istart] ) / 2)
+ 
+     ylen <- yearlength(t@calendar)
+     doy  <- tmid %% ylen
+     year <- 1950 + floor(tmid / ylen)
+ 
+     namelist(doy, year, size, type)
+ }
+ 
+ spells <- mapply(syd, wetdry, time, SIMPLIFY=FALSE)
+ 
+ ocf <- c("obs","cur","fut")
+ nspell <- sapply(renest(spells)$size, length)
+ 
+ for(i in ocf){
+     spells[[i]]$run <- factor(rep(i, nspell[i]), levels=ocf)
+ }
+ 
+
+# wet-dry map
+
+ wdmap <- c(dry=rgb(191,129,45,max=255), wet=rgb(53,151,143,max=255))
+ 
+ bubble <- function(x, cmap=wdmap, size=0.075, pch=19, ...){
+     plot(x$doy, x$year, xlab="day of year", ylab="year", pch=pch,
+          col=cmap[x$type], cex=x$size*size, ...)    
+ }
+ 
+
+ ## Use panels sized proportionally to number of years in each dataset
+ 
+ nyr <-sapply(lapply(renest(spells)$year, range), diff)
+ 
+ yrat <- c(0, cumsum(nyr) / sum(nyr))
+ 
+ smat <- cbind(rep(0,3), rep(1,3), yrat[1:3], yrat[2:4])
+ 
+ 
+ 
+ 
+ 
+ dev.new(width=9, height=12)
+ 
+ split.screen(smat)
+ 
+ ## mar: bottom, left, top, right
+ ## mgp: axis title, axis label, axis line  (3, 1, 0)
+ 
+ for(i in 1:3){
+     screen(i)
+     if(i==1) {par(oma=c(0,0,2,0))}
+     par(mar=c(3,3,2,1), mgp=c(1.5,0.5,0))
+     bubble(spells[[i]])
+     title(names(spells)[i], line=0.5) 
+     if(i==1) {mtext(label, line=0, outer=TRUE)}
+ }
+ close.screen(all.screens=TRUE)
+ 
+
+ 
+ df <- do.call(rbind, lapply(spells, as.data.frame))
+ 
+ df$week <- pmin(round(df$doy / 7)+1 , 52)
+ df$month <- pmax(round(df$doy / 30.5 + 0.5), 1)
+
+dev.new()
+ par(mfrow=c(3,2))
+ 
+ for(i in levels(df$run)){
+     for(j in levels(df$type)){
+         boxplot(size ~ week, data=subset(df, run == i & type == j),
+                 main=paste(i,j), xlab="week", ylim=c(1,max(df$size)),
+                 log="y")
+     }
+ }
+ 
+
+
+## time-centric approach
+
+syd2 <- function(x, t){
     runs <- rle(x)
 
-    size <- runs$length
-    type <- factor(runs$values+1, labels=c("dry","wet"))
-    
-    istop  <- cumsum(runs$length)
-    istart <- c(1, head(istop+1,-1))
-    tmid <- c((t[istop] + t[istart] ) / 2)
+    rs <- runs$length
+    rt <- factor(runs$values+1, labels=c("dry","wet"))
+
+    size <- rep(rs, rs)
+    type <- rep(rt, rs)
 
     ylen <- yearlength(t@calendar)
-    doy  <- tmid %% ylen
-    year <- 1950 + floor(tmid / ylen)
+    doy  <- c(t) %% ylen
+    year <- 1950 + floor(c(t) / ylen)
 
     namelist(doy, year, size, type)
 }
 
-spells <- mapply(syd, wetdry, time, SIMPLIFY=FALSE)
+spells <- mapply(syd2, wetdry, time, SIMPLIFY=FALSE)
 
 ocf <- c("obs","cur","fut")
-nspell <- sapply(renest(spells)$size, length)
+nt <- sapply(time, length)
 
 for(i in ocf){
-    spells[[i]]$run <- factor(rep(i, nspell[i]), levels=ocf)
+    spells[[i]]$run <- factor(rep(i, nt[i]), levels=ocf)
 }
-
-
-#wdmap <- adjustcolor(c(dry="brown", wet="green"), alpha=0.5)
-#wdmap <- c(dry=rgb(140,81,10,128,max=255), wet=rgb(1,102,95,128,max=255))
-#wdmap <- c(dry=rgb(140,81,10,max=255), wet=rgb(1,102,95,max=255))
-
-wdmap <- c(dry=rgb(191,129,45,max=255), wet=rgb(53,151,143,max=255))
-
-bubble <- function(x, cmap=wdmap, size=0.075, pch=19, ...){
-    plot(x$doy, x$year, xlab="day of year", ylab="year", pch=pch,
-         col=cmap[x$type], cex=x$size*size, ...)    
-}
-
-#bubble(spells$obs, main="obs")
-
-
-#png(fname, units="in", res=120, width=7, height=11)
-
-## Use panels sized proportionally to number of years in each dataset
-
-nyr <-sapply(lapply(renest(spells)$year, range), diff)
-
-yrat <- c(0, cumsum(nyr) / sum(nyr))
-
-smat <- cbind(rep(0,3), rep(1,3), yrat[1:3], yrat[2:4])
-
-
-
-
-
-dev.new(width=9, height=12)
-
-split.screen(smat)
-
-## mar: bottom, left, top, right
-## mgp: axis title, axis label, axis line  (3, 1, 0)
-
-for(i in 1:3){
-    screen(i)
-    if(i==1) {par(oma=c(0,0,2,0))}
-    par(mar=c(3,3,2,1), mgp=c(1.5,0.5,0))
-    bubble(spells[[i]])
-    title(names(spells)[i], line=0.5) 
-    if(i==1) {mtext(label, line=0, outer=TRUE)}
-}
-close.screen(all.screens=TRUE)
-
 
 df <- do.call(rbind, lapply(spells, as.data.frame))
-
+ 
 df$week <- pmin(round(df$doy / 7)+1 , 52)
 df$month <- pmax(round(df$doy / 30.5 + 0.5), 1)
 
+# boxplots
+
+ 
+ cmap <- c(obs="black", cur="blue", fut="red")
+
+dev.new()
+ par(mfrow=c(3,2))
+
+ for(i in levels(df$run)){
+     for(j in levels(df$type)){
+         boxplot(size ~ week, data=subset(df, run == i & type == j),
+                 ylim=c(1,max(df$size)), log="y", border=cmap[i],
+                 main=paste(i,j), xlab="week", ylab="spell length (days)")
+     }
+ }
+  
+
+qdf <- aggregate(size ~ run + week + type, df,
+          quantile, probs=c(10, 20, 50, 80, 90)/100)
+
+yr <-  range(subset(qdf, select=-c(week, run, type)))
+
+dev.new()
 par(mfrow=c(3,2))
 
 for(i in levels(df$run)){
     for(j in levels(df$type)){
-        boxplot(size ~ week, data=subset(df, run == i & type == j),
-                main=paste(i,j), xlab="week", ylim=c(1,max(df$size)),
-                log="y")
+        matplot(subset(qdf, run==i & type==j, select=-c(week, run, type)),
+                ylim=yr, type="l", col=cmap[i], lty=c(3,2,1,2,3), lwd=c(1,1,2,1,1),
+                xlab = "week", ylab="spell length (days)", main=paste(i,j))
     }
 }
 
-
+#                ylim=yr, type="l", col=cmap[i], lty=c(3,2,1,2,3),
 
 # ####################################
 #     png(fname, units="in", res=120, width=7, height=7)
