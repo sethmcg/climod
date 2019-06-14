@@ -52,6 +52,22 @@ time <- lapply(nc,"[[","time")
 
 time <- lapply(time, alignepochs, "days since 1950-01-01")
 
+
+## Using the correct 365.2425 value for yearlength(gregorian) gives
+## incorrect results when rounding to year.  Mostly this doesn't
+## matter, except that the incorrect rounding can result in a year at
+## the end only having a single value, which gets taken as the block
+## maximum.  This will at best throw the GEV fit off; at worst, if
+## it's zero, it causes the GEV fit to fail.
+
+## Using julian yearlength of 365.25 resolves the problem.  A more
+## robust solution would be to use PCICt to convert to POSIX
+## representation instead of dividing by year length and flooring;
+## currently pondering whether it's worth the added dependency.
+
+time$obs@calendar = "julian"
+
+
 ### find block maxima
 year <- lapply(time, function(x){floor(x/yearlength(x))})
 ydata <- mapply(split, data, year)
