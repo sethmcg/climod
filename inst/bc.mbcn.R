@@ -9,13 +9,10 @@ suppressMessages(library(MBC))
 ## "ratio sequence": variables that are adjusted with multiplicative
 ## scaling instead of additive shifting.
 
-## Note: arguably, we should transform tasmax/tasmin to tasmed/dtr,
-## with dtr=TRUE
+## Note: arguably, we should transform tmax/tmin to tmed/dtr
 
 rvar <- c(huss=TRUE, prec=TRUE, rsds=FALSE, tmax=FALSE, tmin=FALSE,
           uas=FALSE, vas=FALSE)
-
-vars <- names(rvar)
 
 ## scale variables to range of 10s; needed for precip trace=0.1 not to flatten huss to 0.
 scaling <- c(huss=1000, prec=1, rsds=1/10, tmax=1, tmin=1, uas=10, vas=10)
@@ -24,19 +21,22 @@ scaling <- c(huss=1000, prec=1, rsds=1/10, tmax=1, tmin=1, uas=10, vas=10)
 #######
 
 # For testing
-args <- c("huss",
-          "mbcn/raw/huss.METDATA.NAM-44i/slice/x150/data.x150.y040.nc",
-          "mbcn/raw/huss.hist.CanESM2.RCA4.day.NAM-44i.raw/slice/x150/data.x150.y040.nc",
-          "mbcn/raw/huss.rcp85.CanESM2.RCA4.day.NAM-44i.raw/slice/x150/data.x150.y040.nc",
-          "mbcn/mbcn-METDATA/huss.hist.CanESM2.RCA4.day.NAM-44i.mbcn-METDATA/slice/x150/data.x150.y040.nc",
-          "mbcn/mbcn-METDATA/huss.rcp85.CanESM2.RCA4.day.NAM-44i.mbcn-METDATA/slice/x150/data.x150.y040.nc"
-          )
+args <- c("huss,prec,rsds,tmax,tmin",
+          "testin/obs/huss.obs.DAYMET-ns.day.NAM-44i/slice/x150/data.x150.y040.nc",
+          "testin/raw/huss.hist.MPI-ESM-MR.CRCM5-UQAM.day.NAM-44i.raw/slice/x150/data.x150.y040.nc",
+          "testin/raw/huss.rcp85.MPI-ESM-MR.CRCM5-UQAM.day.NAM-44i.raw/slice/x150/data.x150.y040.nc",
+          "testout/mbcn-DAYMET-ns/huss.hist.MPI-ESM-MR.CRCM5-UQAM.day.NAM-44i.mbcn-DAYMET-ns/slice/x150/data.x150.y040.nc",
+          "testout/mbcn-DAYMET-ns/huss.rcp85.MPI-ESM-MR.CRCM5-UQAM.day.NAM-44i.mbcn-DAYMET-ns/slice/x150/data.x150.y040.nc"
+)
 
 ## comment out this line for testing
 args <- commandArgs(trailingOnly=TRUE)
 
 
-varstring <- args[1]
+
+vars <- unlist(strsplit(args[1], ","))
+## first variable should be the one used in the filename args
+v1 <- vars[1]
 
 infiles   <- list()
 outfiles  <- list()
@@ -51,12 +51,12 @@ vsub <- function(pat, reps, x, ...){
 }
 
 
-infiles[["obs"]] <- vsub(varstring, vars, args[2])
-infiles[["cur"]] <- vsub(varstring, vars, args[3])
-infiles[["fut"]] <- vsub(varstring, vars, args[4])
+infiles[["obs"]] <- vsub(v1, vars, args[2])
+infiles[["cur"]] <- vsub(v1, vars, args[3])
+infiles[["fut"]] <- vsub(v1, vars, args[4])
 
-outfiles[["cur"]] <- vsub(varstring, vars, args[5])
-outfiles[["fut"]] <- vsub(varstring, vars, args[6])
+outfiles[["cur"]] <- vsub(v1, vars, args[5])
+outfiles[["fut"]] <- vsub(v1, vars, args[6])
 
 if(length(args) > 6){
     warning("Ignoring superfluous arguments: ", paste(args[-(1:6)], collapse=" "))
@@ -88,17 +88,6 @@ NAfill <- function(x){
   if(any(is.na(x))){stop("NA values remain after filling")}
   x
 }
-
-#  N <- length(x)
-#  if(is.na(x[1])) x[1] <- x[2]
-#  if(is.na(x[N])) x[N] <- x[N-1]
-#  bad <- is.na(x)
-#  if(any(bad)){
-#    x <- zoo::na.approx(x)
-#    ibad <- which(bad)
-#    x[ibad] <- (x[ibad-1] + x[ibad+1])/2
-#  }
-#  return(x)
 
 
 
