@@ -97,7 +97,7 @@ ingest <- function(files){
         fin <- files[v]
         nc <- nc_open(fin)
         x <- ncvar_get(nc, v)
-        if(all(!is.finite(x)) || all(x == 0)){bail()}
+        if(all(!is.finite(x)) || all(x == 0, na.rm=TRUE)){bail()}
         x <- x * scaling[v]
         x <- NAfill(x)
         result <- cbind(result, x)
