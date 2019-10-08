@@ -58,9 +58,17 @@ infiles[["fut"]] <- vsub(v1, vars, args[4])
 outfiles[["cur"]] <- vsub(v1, vars, args[5])
 outfiles[["fut"]] <- vsub(v1, vars, args[6])
 
-if(length(args) > 6){
-    warning("Ignoring superfluous arguments: ", paste(args[-(1:6)], collapse=" "))
+## set RNG seed used by mbcn functions
+if(length(args) == 7){
+  set.seed(args[7] %% 2^31)
+} else {
+  set.seed(222)
 }
+
+if(length(args) > 7){
+    warning("Ignoring superfluous arguments: ", paste(args[-(1:7)], collapse=" "))
+}
+
 
 
 print(basename(outfiles[["fut"]][1]))
