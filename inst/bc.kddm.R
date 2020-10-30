@@ -62,6 +62,7 @@ istemp <- grepl("temperature", stdname)
 standard_norms <- c(
     "precip"                    = "log",
     "relative_humidity"         = "range",
+    "specific_humidity"         = "zscore",
     "welling.*wave_flux_in_air" = "scale",
     "wind_speed"                = "scale",
     "air_pressure"              = "zscore",
