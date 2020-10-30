@@ -52,6 +52,7 @@ yearlength <- function(time){
         if(is.character(time)){
             calendar <- time
         } else{
+            warning("no calendar attribute; defaulting to 365.2425")
             return(365.2425)
         }
     }

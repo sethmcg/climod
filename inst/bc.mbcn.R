@@ -60,7 +60,7 @@ outfiles[["fut"]] <- vsub(v1, vars, args[6])
 
 ## set RNG seed used by mbcn functions
 if(length(args) == 7){
-  set.seed(args[7] %% 2^31)
+  set.seed(as.numeric(args[7]) %% 2^31)
 } else {
   set.seed(222)
 }
