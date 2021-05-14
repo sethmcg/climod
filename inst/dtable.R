@@ -105,7 +105,9 @@ if(analysis == "pfit" || analysis == "tmmd"){
     sdf <- sdf[!sdf$scenario == "obs",]
 }
 
-
+for (v in c("variable", "scenario", "dataset", "location", "period")){
+    sdf[[v]] <- factor(sdf[[v]])
+}
 
 ## Create the datatable
     
