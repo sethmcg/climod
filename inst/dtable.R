@@ -22,7 +22,7 @@ load_all("~/Desktop/climod")
 #          "~/Desktop/fig/raw2/all/metrics",
 #          "test.pfit")
 args <- c("mpdf",
-          "~/Desktop/DCA/upper/lowbar/mpdf/metrics",
+          "lowbar/mpdf/metrics",
           "upper-atm.SGP.mpdf",
           "variable.level.scenario.GCM.RCM.drop.years.drop.lon.lat.drop",
           FALSE,
@@ -102,7 +102,18 @@ infiles <- list.files(indir, paste0(analysis,".*.txt"))
 rawdata <- lapply(paste0(indir,"/",infiles), read.table,
                   header=TRUE, stringsAsFactors=FALSE)
 
-rawdf <- do.call(rbind, rawdata)
+
+## Would be nice to make these links instead of just filepaths, but I
+## don't know how to get raw HTML to pass through all the DT
+## processing.
+
+## Add filenames of analysis pngs.  Need to do this there while
+## length(links) matches length(rawdata)
+
+pngs <- paste0(dirname(indir), "/", sub("txt","png",infiles))
+
+xdata <- mapply(function(x,y){cbind(x,png=y)}, rawdata, pngs, SIMPLIFY=FALSE)
+rawdf <- do.call(rbind, xdata)
 
 
 ## The first three columns are filename, period, and analysis.
@@ -162,25 +173,30 @@ categoricals$scenario <- relevel(categoricals$scenario, ref="obs")
 # categoricals <- as.data.frame(t(as.matrix(catlist)))
 # colnames(categoricals) <- c("variable", "scenario", "dataset", "location")
 
+## Add column with links to analyses
+links <- ddf$infile
+
 
 dframe <- cbind(categoricals, ddf[,c(-1,-3)])
 
-## drop nodata data points (used in test suite)
-if("location" %in% colnames(dframe)){
-    dframe <- dframe[!dframe$location == "nodata",]
-}
 
 ## get month-based periods to sort correctly
 if(all(dframe$period %in% month.abb)){
     dframe$period <- factor(dframe$period, levels=month.abb)
 }
 
+## drop nodata data points (used in test suite)
+if("location" %in% colnames(dframe)){
+    dframe <- dframe[!dframe$location == "nodata",]
+}
 
 ## Drop obs for analyses where all metrics are relative to obs
 if(analysis %in% c("mpdf", "pfit", "tmmd")){
     dframe <- dframe[dframe$scenario != "obs",]
 }
 
+## drop any factor levels that are now unused
+dframe <- droplevels(dframe)
 
 # ## initial sort by categoricals
 # #sdf <- dframe[with(dframe, order(variable, scenario, location, dataset)), ]
@@ -255,104 +271,76 @@ for (m in month.abb){
     html <- catcolor("variable", "Pastel2")
     html <- catcolor("level",    "Greys",    just="left")
     
-# 
-# if("dataset" %in% colnames(sdf)){
-#     html <- html %>%
-#         formatStyle("dataset",
-#                     backgroundColor=styleEqual(
-#                         levels(sdf$dataset),
-#                         brewer.pal(nlevels(sdf$dataset), "Pastel1")
-#                         ))
-# }
-# 
-# if("location" %in% colnames(sdf)){
-#  html <- html %>%
-#      formatStyle("location",
-#                  color=styleEqual(
-#                      levels(sdf$location),
-#                      rainbow_hcl(nlevels(sdf$location))
-#                      ))
-# }
-# 
-# if("RCM" %in% colnames(sdf)){
-#  html <- html %>%
-#      formatStyle("RCM",
-#                  color=styleEqual(
-#                      levels(sdf[["RCM"]),
-#                      brewer.pal(nlevels(sdf[["RCM"]]), "Pastel1")
-#                      ))
-# }
-# 
 
 
-#--#
-#--#
-#--### Red to blue bg color style for correlations, etc.
-#--#redblue <- styleInterval(seq(-0.95,0.95,0.1),
-#--#                         c(hsv(1,   (10:1)/10, 1),
-#--#                           "#FFFFFF",
-#--#                           hsv(2/3, (1:10)/10, 1)
-#--#                           ))
-#--#
-#--### Red to blue bg color style for percentages
-#--#pctredblue <- styleInterval(seq(2.5,97.5,5),
-#--#                         c(hsv(1,   (10:1)/10, 1),
-#--#                           "#FFFFFF",
-#--#                           hsv(2/3, (1:10)/10, 1)
-#--#                           ))
-#--#
-#--### Rainbow bg color style for days of the year
-#--#doyrainbow <- styleInterval(1:365, rainbow_hcl(366, c=50, l=100))
-#--#
-#--#
-#--#if(analysis == "gev"){
-#--#    ## background bars for the different return levels
-#--#    for(m in c("rlevlo", "rlevmid", "rlevhi")){
-#--#        html <- html %>% formatStyle(m, background=styleColorBar(sdf[[m]], "#CCCCCC"))
-#--#    }
-#--#}
-#--#
-#--#
-#--#
-#--#if(analysis == "pfit"){
-#--#
-#--#    ## range of MAD metrics for background bars
-#--#    vrange <- lapply(sdf[,c("freqmad","intmad","totmad")], range, na.rm=TRUE)
-#--#    vrange <- lapply(vrange, function(x){x[1]<-0;x})  ## set min for MAD to zero
-#--#
-#--#    ## red-blue background for correlations
-#--#    for(m in c("freqcor", "intcor", "totcor")){
-#--#        html <- html %>% formatStyle(m, backgroundColor=redblue)
-#--#    }
-#--#
-#--#    ## background bar from 0 to max for MADs
-#--#    for(m in c("freqmad","intmad","totmad")){
-#--#        html <- html %>% formatStyle(m, background=styleColorBar(vrange[[m]], "#CCCCCC"))
-#--#    }
-#--#}
-#--#
-#--#
-#--#
-#--#if(analysis == "tmmd"){
-#--#
-#--#    vrange <- lapply(sdf[,c("dmad", "dmaxval","dminval")], range)
-#--#    vrange$dmad[1] <- 0  ## set min for MAD to zero
-#--#
-#--#    ## dmad, dminval, dmaxval: colorbars from min to max
-#--#    for(d in c("dmad", "dminval", "dmaxval")){
-#--#        html <- html %>%
-#--#            formatStyle(d, background=styleColorBar(vrange[[d]], "#CCCCCC"))
-#--#    }
-#--#    
-#--#    ## dpctpos: red-blue background 0:100
-#--#    html <- html %>% formatStyle("dpctpos", backgroundColor=pctredblue)
-#--#
-#--#    ## minday & maxday: colorwheel
-#--#    for(d in c("dminday", "dmaxday")){
-#--#        html <- html %>% formatStyle(d, backgroundColor=doyrainbow)
-#--#    }
-#--#}
-#--#    
+##########
+
+## Red to blue bg color style for correlations, etc.
+redblue <- styleInterval(seq(-0.95,0.95,0.1),
+                         c(hsv(1,   (10:1)/10, 1),
+                           "#FFFFFF",
+                           hsv(2/3, (1:10)/10, 1)
+                           ))
+
+## Red to blue bg color style for percentages
+pctredblue <- styleInterval(seq(2.5,97.5,5),
+                         c(hsv(1,   (10:1)/10, 1),
+                           "#FFFFFF",
+                           hsv(2/3, (1:10)/10, 1)
+                           ))
+
+## Rainbow bg color style for days of the year
+doyrainbow <- styleInterval(1:365, rainbow_hcl(366, c=50, l=100))
+
+
+if(analysis == "gev"){
+    ## background bars for the different return levels
+    for(m in c("rlevlo", "rlevmid", "rlevhi")){
+        html <- html %>% formatStyle(m, background=styleColorBar(sdf[[m]], "#CCCCCC"))
+    }
+}
+
+
+
+if(analysis == "pfit"){
+
+    ## range of MAD metrics for background bars
+    vrange <- lapply(sdf[,c("freqmad","intmad","totmad")], range, na.rm=TRUE)
+    vrange <- lapply(vrange, function(x){x[1]<-0;x})  ## set min for MAD to zero
+
+    ## red-blue background for correlations
+    for(m in c("freqcor", "intcor", "totcor")){
+        html <- html %>% formatStyle(m, backgroundColor=redblue)
+    }
+
+    ## background bar from 0 to max for MADs
+    for(m in c("freqmad","intmad","totmad")){
+        html <- html %>% formatStyle(m, background=styleColorBar(vrange[[m]], "#CCCCCC"))
+    }
+}
+
+
+
+if(analysis == "tmmd"){
+
+    vrange <- lapply(sdf[,c("dmad", "dmaxval","dminval")], range)
+    vrange$dmad[1] <- 0  ## set min for MAD to zero
+
+    ## dmad, dminval, dmaxval: colorbars from min to max
+    for(d in c("dmad", "dminval", "dmaxval")){
+        html <- html %>%
+            formatStyle(d, background=styleColorBar(vrange[[d]], "#CCCCCC"))
+    }
+    
+    ## dpctpos: red-blue background 0:100
+    html <- html %>% formatStyle("dpctpos", backgroundColor=pctredblue)
+
+    ## minday & maxday: colorwheel
+    for(d in c("dminday", "dmaxday")){
+        html <- html %>% formatStyle(d, backgroundColor=doyrainbow)
+    }
+}
+############    
 
 
     ## Save to file
