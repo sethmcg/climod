@@ -4,6 +4,8 @@ library(colorspace)
 library(devtools)
 load_all("~/Desktop/climod")
 
+
+
 ## Call as: Rscript dtable.R analysis indir outname
 
 ## analysis = type of analysis (pfit, gev, etc.)
@@ -35,7 +37,7 @@ outname  <- args[3]
 
 
 ## pattern for spitting filename to columns.  Components are used as
-## colum names, 'drop' columns are removed.
+## column names, 'drop' columns are removed.
 
 if(length(args)<4){
     defaultpattern <- TRUE
@@ -54,6 +56,42 @@ if(length(args)<5){
 } else {
     merge <- args[5]
 }
+
+
+## color palette functions
+pal <- function(N, pname, just=c("just","left","right","center"), reverse=FALSE){
+    f <- ifelse(reverse, rev, I)
+    if(pname %in% c("rainbow_hcl","heat_hcl","terrain_hcl","diverging_hcl")){
+        f(do.call(pname, list(N)))
+    } else {
+        just <- match.arg(just)
+        ## justified colormap
+        if(just == "just"){
+            return(f(brewer.pal(N, pname)))
+        }
+        np <- brewer.pal.info[pname,"maxcolors"]
+        p <- brewer.pal(np, pname)
+        ## left-justified colormap
+        if(just == "left"){            
+            return(f(p[1:N]))
+        }
+        ## right-justified colormap
+        if(just == "right"){
+            return(f(p[np-1:N]))
+        }
+        ## centered colormap
+        ## (drop mid value if N odd & np even or vice-versa)
+        if(just == "center"){
+            x <- floor((np-N)/2)
+            p <- p[(x+1):(np-x)]
+            while(length(p) > N){
+                p <- p[-(length(p)+1)/2]
+            }
+            return(f(p))
+        }
+    }
+}
+
 
 
 ## Read in all the analysis.*.txt files in indir and bind them
@@ -193,21 +231,14 @@ for (m in month.abb){
                     ))
     }
 
-    pal <- function(N, pname){
-        if(pname %in% c("rainbow_hcl","heat_hcl","terrain_hcl","diverging_hcl")){
-            do.call(pname, list(N))
-        } else {
-            brewer.pal(N, pname)
-        }
-    }
 
-    catcolor <- function(cname, pname){
+    catcolor <- function(cname, pname, ...){
         if(cname %in% colnames(sdf)){
             html <- html %>%
                 formatStyle(cname,
                             backgroundColor=styleEqual(
                                 levels(sdf[[cname]]),
-                                pal(nlevels(sdf[[cname]]), pname)
+                                pal(nlevels(sdf[[cname]]), pname, ...)
                                 )
                             )
             
@@ -215,13 +246,15 @@ for (m in month.abb){
         return(html)
     }
 
-    html <- catcolor("dataset", "Pastel1")
+    html <- catcolor("dataset",  "Pastel1")
     html <- catcolor("location", "rainbow_hcl")
-    html <- catcolor("RCM", "Pastel1")
-    html <- catcolor("GCM", "Pastel2")
-    html <- catcolor("lat", "PuOr")
-    html <- catcolor("lon", "Spectral")
-
+    html <- catcolor("RCM",      "Pastel1",  just="right")
+    html <- catcolor("GCM",      "Pastel1",  just="left")
+    html <- catcolor("lat",      "RdBu",     just="center")
+    html <- catcolor("lon",      "Spectral", just="center", reverse=TRUE)
+    html <- catcolor("variable", "Pastel2")
+    html <- catcolor("level",    "Greys",    just="left")
+    
 # 
 # if("dataset" %in% colnames(sdf)){
 #     html <- html %>%
