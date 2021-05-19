@@ -21,9 +21,9 @@ load_all("~/Desktop/climod")
 #args <- c("pfit",
 #          "~/Desktop/fig/raw2/all/metrics",
 #          "test.pfit")
-args <- c("mpdf",
-          "lowbar/mpdf/metrics",
-          "upper-atm.SGP.mpdf",
+args <- c("bean",
+          "lowbar/bean/metrics",
+          "upper-atm.SGP.bean",
           "variable.level.scenario.GCM.RCM.drop.years.drop.lon.lat.drop",
           FALSE,
           TRUE)
@@ -56,42 +56,6 @@ if(length(args)<5){
 } else {
     merge <- args[5]
 }
-
-
-## color palette functions
-pal <- function(N, pname, just=c("just","left","right","center"), reverse=FALSE){
-    f <- ifelse(reverse, rev, I)
-    if(pname %in% c("rainbow_hcl","heat_hcl","terrain_hcl","diverging_hcl")){
-        f(do.call(pname, list(N)))
-    } else {
-        just <- match.arg(just)
-        ## justified colormap
-        if(just == "just"){
-            return(f(brewer.pal(N, pname)))
-        }
-        np <- brewer.pal.info[pname,"maxcolors"]
-        p <- brewer.pal(np, pname)
-        ## left-justified colormap
-        if(just == "left"){            
-            return(f(p[1:N]))
-        }
-        ## right-justified colormap
-        if(just == "right"){
-            return(f(p[np-1:N]))
-        }
-        ## centered colormap
-        ## (drop mid value if N odd & np even or vice-versa)
-        if(just == "center"){
-            x <- floor((np-N)/2)
-            p <- p[(x+1):(np-x)]
-            while(length(p) > N){
-                p <- p[-(length(p)+1)/2]
-            }
-            return(f(p))
-        }
-    }
-}
-
 
 
 ## Read in all the analysis.*.txt files in indir and bind them
@@ -207,14 +171,107 @@ dframe <- droplevels(dframe)
 #    sdf[[v]] <- factor(sdf[[v]])
 #}
 
-## Create the datatable
-    
+##############################
+## Datatable styling functions
+
 ## Note: colors need to be either hex (which RColorBrewer and
 ## colorspace emit) or names for HTML; R color names don't work.
 
+##############################
+## Give categorical columns background colors.
 
-## sdf has 56640 rows, which is apparently too many for DataTable, so
-## we have to split this up by month.
+## May need to pull from different parts of multiple palettes in order
+## to get enough distinct colors, plus we want pastel colors that are
+## easy to read black text on top of, so use this function to get
+## select chunks of colorbrewer palettes.  Also wraps the HCL palettes
+## to have the same signature so that the catcolor function (which
+## applies the styling) can pass arguments through.
+
+## color palette functions for categorical data
+pal <- function(N, pname, just=c("just","left","right","center"), reverse=FALSE){
+    f <- ifelse(reverse, rev, I)
+    if(pname %in% c("rainbow_hcl","heat_hcl","terrain_hcl","diverging_hcl")){
+        f(do.call(pname, list(N)))
+    } else {
+        just <- match.arg(just)
+        ## justified colormap
+        if(just == "just"){
+            return(f(brewer.pal(N, pname)))
+        }
+        np <- brewer.pal.info[pname,"maxcolors"]
+        p <- brewer.pal(np, pname)
+        ## left-justified colormap
+        if(just == "left"){            
+            return(f(p[1:N]))
+        }
+        ## right-justified colormap
+        if(just == "right"){
+            return(f(p[np-1:N]))
+        }
+        ## centered colormap
+        ## (drop mid value if N odd & np even or vice-versa)
+        if(just == "center"){
+            x <- floor((np-N)/2)
+            p <- p[(x+1):(np-x)]
+            while(length(p) > N){
+                p <- p[-(length(p)+1)/2]
+            }
+            return(f(p))
+        }
+    }
+}
+
+
+## Function to apply background color styling to categorical columns
+catcolor <- function(cname, pname, ...){
+    if(cname %in% colnames(sdf)){
+        html <- html %>%
+            formatStyle(cname,
+                        backgroundColor=styleEqual(
+                            levels(sdf[[cname]]),
+                            pal(nlevels(sdf[[cname]]), pname, ...)
+                            )
+                        )
+        
+    }
+    return(html)
+}
+
+##############################
+## Numerical columns get a few different styles, depending on
+## characteristics of the metric.
+
+
+
+
+
+##########
+## Color palette functions for numerical data
+
+## Background color: red-to-blue with white in the middle
+
+rwbpal <- c(hsv(1, (10:1)/10, 1),
+            "#FFFFFF",
+            hsv(2/3, (1:10)/10, 1)
+            )
+
+## RWB for -1:1 correlations
+redblue <- styleInterval(seq(-0.95,0.95,0.1), rwbpal)
+
+## RWB for 0:100 percentages
+pctredblue <- styleInterval(seq(2.5,97.5,5), rwbpal)
+
+## constant-intensity rainbow for days of the year
+doyrainbow <- styleInterval(1:365, rainbow_hcl(366, c=50, l=100))
+
+
+
+
+
+## Create and style the datatable
+
+## For DCA, sdf has 56640 rows, which is apparently too many for
+## DataTable, so we have to split this up by month.
 
 for (m in month.abb){
 
@@ -248,20 +305,6 @@ for (m in month.abb){
     }
 
 
-    catcolor <- function(cname, pname, ...){
-        if(cname %in% colnames(sdf)){
-            html <- html %>%
-                formatStyle(cname,
-                            backgroundColor=styleEqual(
-                                levels(sdf[[cname]]),
-                                pal(nlevels(sdf[[cname]]), pname, ...)
-                                )
-                            )
-            
-        }
-        return(html)
-    }
-
     html <- catcolor("dataset",  "Pastel1")
     html <- catcolor("location", "rainbow_hcl")
     html <- catcolor("RCM",      "Pastel1",  just="right")
@@ -272,27 +315,11 @@ for (m in month.abb){
     html <- catcolor("level",    "Greys",    just="left")
     
 
-
-##########
-
-## Red to blue bg color style for correlations, etc.
-redblue <- styleInterval(seq(-0.95,0.95,0.1),
-                         c(hsv(1,   (10:1)/10, 1),
-                           "#FFFFFF",
-                           hsv(2/3, (1:10)/10, 1)
-                           ))
-
-## Red to blue bg color style for percentages
-pctredblue <- styleInterval(seq(2.5,97.5,5),
-                         c(hsv(1,   (10:1)/10, 1),
-                           "#FFFFFF",
-                           hsv(2/3, (1:10)/10, 1)
-                           ))
-
-## Rainbow bg color style for days of the year
-doyrainbow <- styleInterval(1:365, rainbow_hcl(366, c=50, l=100))
+    ## get range of numeric columns in data table
+    vrange <- lapply(sdf[,sapply(sdf, is.numeric)], range, na.rm=TRUE)
 
 
+    
 if(analysis == "gev"){
     ## background bars for the different return levels
     for(m in c("rlevlo", "rlevmid", "rlevhi")){
@@ -305,7 +332,7 @@ if(analysis == "gev"){
 if(analysis == "pfit"){
 
     ## range of MAD metrics for background bars
-    vrange <- lapply(sdf[,c("freqmad","intmad","totmad")], range, na.rm=TRUE)
+#    vrange <- lapply(sdf[,c("freqmad","intmad","totmad")], range, na.rm=TRUE)
     vrange <- lapply(vrange, function(x){x[1]<-0;x})  ## set min for MAD to zero
 
     ## red-blue background for correlations
@@ -323,7 +350,7 @@ if(analysis == "pfit"){
 
 if(analysis == "tmmd"){
 
-    vrange <- lapply(sdf[,c("dmad", "dmaxval","dminval")], range)
+#    vrange <- lapply(sdf[,c("dmad", "dmaxval","dminval")], range)
     vrange$dmad[1] <- 0  ## set min for MAD to zero
 
     ## dmad, dminval, dmaxval: colorbars from min to max
