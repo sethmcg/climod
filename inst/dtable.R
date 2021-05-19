@@ -21,9 +21,9 @@ load_all("~/Desktop/climod")
 #args <- c("pfit",
 #          "~/Desktop/fig/raw2/all/metrics",
 #          "test.pfit")
-args <- c("bean",
-          "lowbar/bean/metrics",
-          "upper-atm.SGP.bean",
+args <- c("mpdf",
+          "lowbar/mpdf/metrics",
+          "upper-atm.SGP.mpdf",
           "variable.level.scenario.GCM.RCM.drop.years.drop.lon.lat.drop",
           FALSE,
           TRUE)
@@ -243,27 +243,30 @@ catcolor <- function(cname, pname, ...){
 ## characteristics of the metric.
 
 
-
-
-
 ##########
 ## Color palette functions for numerical data
 
 ## Background color: red-to-blue with white in the middle
-
 rwbpal <- c(hsv(1, (10:1)/10, 1),
             "#FFFFFF",
             hsv(2/3, (1:10)/10, 1)
             )
+## for -1:1 correlations
+redbluecorr <- styleInterval(seq(-0.95,0.95,0.1), rwbpal)
 
-## RWB for -1:1 correlations
-redblue <- styleInterval(seq(-0.95,0.95,0.1), rwbpal)
 
+## White to green
+wgpal <- c(hsv(0.35, (0:10)/12, 1-(0:10)/40))
+## for 0:1 skill scores
+whitegreenskill <- styleInterval(seq(0.05, 0.95, 0.1), wgpal)
+## and and 0:100 percentages
+whitegreenpct <- styleInterval(seq(5, 95, 10), wgpal)
+                               
 ## RWB for 0:100 percentages
-pctredblue <- styleInterval(seq(2.5,97.5,5), rwbpal)
+#pctredblue <- styleInterval(seq(2.5,97.5,5), rwbpal)
 
 ## constant-intensity rainbow for days of the year
-doyrainbow <- styleInterval(1:365, rainbow_hcl(366, c=50, l=100))
+rainbowdoy <- styleInterval(1:365, rainbow_hcl(366, c=50, l=100))
 
 
 
@@ -327,54 +330,100 @@ for (V in levels(dframe$variable)){
         vrange <- lapply(sdf[,sapply(sdf, is.numeric)], range, na.rm=TRUE)
 
         
+        ## Gray background bars from min to max
+        barmetrics <- c("rlevlo", "rlevmid", "rlevhi",       # gev
+                        "dmaxval", "dminval",                # tmmd
+                        "mean", "skew", "min","max",         # mpdf
+                        "q10", "q25", "q50", "q75", "q90",   # mpdf
+                        "pislope",                           # intsp
+                        "ktau", "q50over", "modeP", "modeT"  # joint
+                        )
         
-        if(analysis == "gev"){
-            ## background bars for the different return levels
-            for(m in c("rlevlo", "rlevmid", "rlevhi")){
-                html <- html %>% formatStyle(m, background=styleColorBar(sdf[[m]], "#CCCCCC"))
-            }
+        ## Gray background bars from 0 to max
+        devmetrics <- c("freqmad", "intmad", "totmad",       # pfit
+                        "dmad",                              # tmmd
+                        "stdev"                              # mpdf
+                        )
+
+        ## Set min of range for deviation metrics to 0
+        for (m in devmetrics){
+            if(!is.null(vrange[[m]])) { vrange[[m]][1] <-0 }
         }
 
-
-
-        if(analysis == "pfit"){
-
-            ## range of MAD metrics for background bars
-            #    vrange <- lapply(sdf[,c("freqmad","intmad","totmad")], range, na.rm=TRUE)
-            vrange <- lapply(vrange, function(x){x[1]<-0;x})  ## set min for MAD to zero
-
-            ## red-blue background for correlations
-            for(m in c("freqcor", "intcor", "totcor")){
-                html <- html %>% formatStyle(m, backgroundColor=redblue)
-            }
-
-            ## background bar from 0 to max for MADs
-            for(m in c("freqmad","intmad","totmad")){
+        ## apply background bar style
+        for(m in c(barmetrics, devmetrics)){
+            if(m %in% colnames(sdf)){
                 html <- html %>% formatStyle(m, background=styleColorBar(vrange[[m]], "#CCCCCC"))
             }
         }
 
 
+        ## background color styled metrics
 
-        if(analysis == "tmmd"){
+        bgmetrics <- list(
+            freqcor = redbluecorr,
+            intcor  = redbluecorr,
+            totcor  = redbluecorr,
+            pdfsk   = whitegreenskill,
+            tailsk  = whitegreenskill,
+            dpctpos = whitegreenpct,
+            dminday = rainbowdoy,
+            dmaxday = rainbowdoy
+            )
 
-            #    vrange <- lapply(sdf[,c("dmad", "dmaxval","dminval")], range)
-            vrange$dmad[1] <- 0  ## set min for MAD to zero
-
-            ## dmad, dminval, dmaxval: colorbars from min to max
-            for(d in c("dmad", "dminval", "dmaxval")){
-                html <- html %>%
-                    formatStyle(d, background=styleColorBar(vrange[[d]], "#CCCCCC"))
-            }
-            
-            ## dpctpos: red-blue background 0:100
-            html <- html %>% formatStyle("dpctpos", backgroundColor=pctredblue)
-
-            ## minday & maxday: colorwheel
-            for(d in c("dminday", "dmaxday")){
-                html <- html %>% formatStyle(d, backgroundColor=doyrainbow)
+        for(m in names(bgmetrics)){
+            if(m %in% colnames(sdf)){
+                html <- html %>% formatStyle(m, backgroundColor=bgmetrics[[m]])
             }
         }
+        
+#        if(analysis == "gev"){
+#            ## background bars for the different return levels
+#            for(m in c("rlevlo", "rlevmid", "rlevhi")){
+#                html <- html %>% formatStyle(m, background=styleColorBar(sdf[[m]], "#CCCCCC"))
+#            }
+#        }
+
+
+
+#        if(analysis == "pfit"){
+#
+#            ## red-blue background for correlations
+#            for(m in c("freqcor", "intcor", "totcor")){
+#                html <- html %>% formatStyle(m, backgroundColor=redblue)
+#            }
+#
+#            ## range of MAD metrics for background bars
+#            vrange <- lapply(sdf[,c("freqmad","intmad","totmad")], range, na.rm=TRUE)
+#            vrange <- lapply(vrange, function(x){x[1]<-0;x})  ## set min for MAD to zero
+#
+#            ## background bar from 0 to max for MADs
+#            for(m in c("freqmad","intmad","totmad")){
+#                html <- html %>% formatStyle(m, background=styleColorBar(vrange[[m]], "#CCCCCC"))
+#            }
+#        }
+
+
+
+#        if(analysis == "tmmd"){
+#
+#            #    vrange <- lapply(sdf[,c("dmad", "dmaxval","dminval")], range)
+#            vrange$dmad[1] <- 0  ## set min for MAD to zero
+#
+#            ## dmad, dminval, dmaxval: colorbars from min to max
+#            for(d in c("dmad", "dminval", "dmaxval")){
+#                html <- html %>%
+#                    formatStyle(d, background=styleColorBar(vrange[[d]], "#CCCCCC"))
+#            }
+#            
+#            ## dpctpos: red-blue background 0:100
+#            html <- html %>% formatStyle("dpctpos", backgroundColor=pctredblue)
+#
+#            ## minday & maxday: colorwheel
+#            for(d in c("dminday", "dmaxday")){
+#                html <- html %>% formatStyle(d, backgroundColor=doyrainbow)
+#            }
+#        }
         ############    
 
 
