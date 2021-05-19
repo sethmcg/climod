@@ -144,9 +144,10 @@ links <- ddf$infile
 dframe <- cbind(categoricals, ddf[,c(-1,-3)])
 
 
-## get month-based periods to sort correctly
+## if period is monthly, change column name and sort correctly
 if(all(dframe$period %in% month.abb)){
-    dframe$period <- factor(dframe$period, levels=month.abb)
+    colnames(dframe)[which(names(dframe) == "period")] <- "month"
+    dframe$month <- factor(dframe$month, levels=month.abb)
 }
 
 ## drop nodata data points (used in test suite)
@@ -270,107 +271,115 @@ doyrainbow <- styleInterval(1:365, rainbow_hcl(366, c=50, l=100))
 
 ## Create and style the datatable
 
-## For DCA, sdf has 56640 rows, which is apparently too many for
-## DataTable, so we have to split this up by month.
+## Note that different variables need to go into different datatables,
+## because otherwise we can't style the numeric columns because their
+## ranges don't match.
 
-for (m in month.abb){
+## (Figure out how to deal with the normal case of no 1 var / no levels later)
+
+for (V in levels(dframe$variable)){
+    for (L in levels(dframe$level)){
+
+        v <- paste0(V, sub("p","",L))
+
+        outfile <- paste0(outname, ".", v, ".html")
+        outdir  <- paste0(outname, ".", v, "_files")
+        caption <- paste0(gsub(".", " ", basename(outname), fixed=TRUE), " ", V, " ", L)
+
+        sdf <- dframe[dframe$variable == V & dframe$level == L,]
 
 
-    outfile <- paste0(outname, ".", m, ".html")
-    outdir  <- paste0(outname, ".", m, "_files")
-    caption <- paste0(gsub(".", " ", basename(outname), fixed=TRUE), " ", m)
+        ## Background-color styling for categorical columns
 
-    
-    sdf <- dframe[dframe$period == m,]
+        html <- datatable(sdf,
+                          options = list(paging=FALSE),
+                          rownames=FALSE,
+                          caption=caption,
+                          filter="top"
+                          )
+
+        ## scenario has special custom coloring
+        
+        if("scenario" %in% colnames(sdf)){
+            html <- html %>%
+                formatStyle("scenario",
+                            backgroundColor=styleEqual(
+                                c("obs","hist","rcp45","rcp85"),
+                                c("#FFFFFF","#E4E4FF","#FFFFE4","#FFE4E4")
+                                ))
+        }
 
 
-    ## Basic colorization for categoricals first
+        html <- catcolor("dataset",  "Pastel1")
+        html <- catcolor("location", "rainbow_hcl")
+        html <- catcolor("month", "rainbow_hcl")
+        html <- catcolor("RCM",      "Pastel1",  just="right")
+        html <- catcolor("GCM",      "Pastel1",  just="left")
+        html <- catcolor("lat",      "RdBu",     just="center")
+        html <- catcolor("lon",      "Spectral", just="center", reverse=TRUE)
+        html <- catcolor("variable", "Pastel2")
+        html <- catcolor("level",    "Greys",    just="left")
+        
 
-    html <- datatable(sdf,
-                      options = list(paging=FALSE),
-                      rownames=FALSE,
-                      caption=caption,
-                      filter="top"
-                      )
+        ## Background-color or background-bar styling for numeric columns
+        
+        ## get range of numeric columns in data table
+        vrange <- lapply(sdf[,sapply(sdf, is.numeric)], range, na.rm=TRUE)
 
-    ## scenario has special custom coloring
-    
-    if("scenario" %in% colnames(sdf)){
-        html <- html %>%
-            formatStyle("scenario",
-                        backgroundColor=styleEqual(
-                            c("obs","hist","rcp45","rcp85"),
-                            c("#FFFFFF","#E4E4FF","#FFFFE4","#FFE4E4")
-                    ))
+        
+        
+        if(analysis == "gev"){
+            ## background bars for the different return levels
+            for(m in c("rlevlo", "rlevmid", "rlevhi")){
+                html <- html %>% formatStyle(m, background=styleColorBar(sdf[[m]], "#CCCCCC"))
+            }
+        }
+
+
+
+        if(analysis == "pfit"){
+
+            ## range of MAD metrics for background bars
+            #    vrange <- lapply(sdf[,c("freqmad","intmad","totmad")], range, na.rm=TRUE)
+            vrange <- lapply(vrange, function(x){x[1]<-0;x})  ## set min for MAD to zero
+
+            ## red-blue background for correlations
+            for(m in c("freqcor", "intcor", "totcor")){
+                html <- html %>% formatStyle(m, backgroundColor=redblue)
+            }
+
+            ## background bar from 0 to max for MADs
+            for(m in c("freqmad","intmad","totmad")){
+                html <- html %>% formatStyle(m, background=styleColorBar(vrange[[m]], "#CCCCCC"))
+            }
+        }
+
+
+
+        if(analysis == "tmmd"){
+
+            #    vrange <- lapply(sdf[,c("dmad", "dmaxval","dminval")], range)
+            vrange$dmad[1] <- 0  ## set min for MAD to zero
+
+            ## dmad, dminval, dmaxval: colorbars from min to max
+            for(d in c("dmad", "dminval", "dmaxval")){
+                html <- html %>%
+                    formatStyle(d, background=styleColorBar(vrange[[d]], "#CCCCCC"))
+            }
+            
+            ## dpctpos: red-blue background 0:100
+            html <- html %>% formatStyle("dpctpos", backgroundColor=pctredblue)
+
+            ## minday & maxday: colorwheel
+            for(d in c("dminday", "dmaxday")){
+                html <- html %>% formatStyle(d, backgroundColor=doyrainbow)
+            }
+        }
+        ############    
+
+
+        ## Save to file
+
+        htmltools::save_html(html, file=outfile, lib=outdir, background="white")
     }
-
-
-    html <- catcolor("dataset",  "Pastel1")
-    html <- catcolor("location", "rainbow_hcl")
-    html <- catcolor("RCM",      "Pastel1",  just="right")
-    html <- catcolor("GCM",      "Pastel1",  just="left")
-    html <- catcolor("lat",      "RdBu",     just="center")
-    html <- catcolor("lon",      "Spectral", just="center", reverse=TRUE)
-    html <- catcolor("variable", "Pastel2")
-    html <- catcolor("level",    "Greys",    just="left")
-    
-
-    ## get range of numeric columns in data table
-    vrange <- lapply(sdf[,sapply(sdf, is.numeric)], range, na.rm=TRUE)
-
-
-    
-if(analysis == "gev"){
-    ## background bars for the different return levels
-    for(m in c("rlevlo", "rlevmid", "rlevhi")){
-        html <- html %>% formatStyle(m, background=styleColorBar(sdf[[m]], "#CCCCCC"))
-    }
-}
-
-
-
-if(analysis == "pfit"){
-
-    ## range of MAD metrics for background bars
-#    vrange <- lapply(sdf[,c("freqmad","intmad","totmad")], range, na.rm=TRUE)
-    vrange <- lapply(vrange, function(x){x[1]<-0;x})  ## set min for MAD to zero
-
-    ## red-blue background for correlations
-    for(m in c("freqcor", "intcor", "totcor")){
-        html <- html %>% formatStyle(m, backgroundColor=redblue)
-    }
-
-    ## background bar from 0 to max for MADs
-    for(m in c("freqmad","intmad","totmad")){
-        html <- html %>% formatStyle(m, background=styleColorBar(vrange[[m]], "#CCCCCC"))
-    }
-}
-
-
-
-if(analysis == "tmmd"){
-
-#    vrange <- lapply(sdf[,c("dmad", "dmaxval","dminval")], range)
-    vrange$dmad[1] <- 0  ## set min for MAD to zero
-
-    ## dmad, dminval, dmaxval: colorbars from min to max
-    for(d in c("dmad", "dminval", "dmaxval")){
-        html <- html %>%
-            formatStyle(d, background=styleColorBar(vrange[[d]], "#CCCCCC"))
-    }
-    
-    ## dpctpos: red-blue background 0:100
-    html <- html %>% formatStyle("dpctpos", backgroundColor=pctredblue)
-
-    ## minday & maxday: colorwheel
-    for(d in c("dminday", "dmaxday")){
-        html <- html %>% formatStyle(d, backgroundColor=doyrainbow)
-    }
-}
-############    
-
-
-    ## Save to file
-
-    htmltools::save_html(html, file=outfile, lib=outdir, background="white")
 }
