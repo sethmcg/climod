@@ -25,11 +25,10 @@ args <- c("mpdf",
           "lowbar/mpdf/metrics",
           "upper-atm.SGP.mpdf",
           "variable.level.scenario.GCM.RCM.drop.years.drop.lon.lat.drop",
-          FALSE,
-          TRUE)
+          FALSE)
 
 ## Comment out this line for testing
-#args <- commandArgs(trailingOnly=TRUE)
+args <- commandArgs(trailingOnly=TRUE)
 
 analysis <- args[1]
 indir    <- args[2]
