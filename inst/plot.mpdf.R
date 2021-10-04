@@ -4,7 +4,7 @@ library(devtools)
 load_all("~/climod")
 library(ncdf4)
 
-## Call as: Rscript plot.intsp.R label obs cur fut png var txt
+## Call as: Rscript plot.mpdf.R label obs cur fut png var txt
 
 ## png = name of output file for plotted figure
 ## txt = name of output file for plain-text table of metrics

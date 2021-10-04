@@ -4,7 +4,7 @@ library(devtools)
 load_all("~/climod")
 library(ncdf4)
 
-## Call as: Rscript plot.pfit.R label obs cur fut png var txt
+## Call as: Rscript plot.tmmd.R label obs cur fut png var txt
 
 ## provide input files for tmax; tmin is assumed analogous
 ## png = name of output file for plotted figure
