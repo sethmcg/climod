@@ -62,10 +62,12 @@ time <- lapply(time, alignepochs, epoch)
 ## decade = 1980 == [1976,1985]
 ## that way we don't get single-year decades at ends
 
-## We'd want atime if we hadn't *just* done the alignment
+## We'd want to alignepochs() in this function if we hadn't *just*
+## done it.  Note that it may be a smidge off; need to add 0.001 to
+## time to get fyear values that match NCL date function results.
 
-ymd <- function(T){
-    #    atime  <- c(alignepochs(T, "days since 1900-01-01"))
+ydm <- function(T){
+
     ylen   <- yearlength(T)
     fyear  <- T / ylen + 1900
     year   <- c(floor(fyear))
@@ -80,13 +82,12 @@ ymd <- function(T){
 
 tcat <- function(x){
     x$mod <- copyatts(x$fut, c(x$cur, x$fut))
-#    x$cur <- x$fut <- NULL
     return(x)}
 
 Data <- tcat(Data)
 time <- tcat(time)
 
-df <- mapply(cbind, lapply(time, ymd), data=Data, SIMPLIFY=FALSE)
+df <- mapply(cbind, lapply(time, ydm), data=Data, SIMPLIFY=FALSE)
 
 
 agg <- function(x){aggregate(data ~ decade + month, x, mean)}
