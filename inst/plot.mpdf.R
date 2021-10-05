@@ -21,7 +21,7 @@ args <- c("tmin rcp85 MPI-ESM-MR CRCM5-UQAM NAM-44i mbcn-gridMET",
 
 
 ## comment out this line for testing
-#args <- commandArgs(trailingOnly=TRUE)
+args <- commandArgs(trailingOnly=TRUE)
 
 label <- args[1]
         
