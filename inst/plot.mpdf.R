@@ -56,7 +56,7 @@ if(v == "prec"){
 
 time <- lapply(nc,"[[","time")
 epoch <- "days since 1900-01-01"
-time <- lapply(time, alignepochs, epoch)
+atime <- lapply(time, alignepochs, epoch)
 
 
 ## concatenate model current & future
@@ -68,13 +68,18 @@ tcat <- function(x){
 }
 
 Data <- tcat(Data)
-time <- tcat(time)
+atime <- tcat(atime)
 
 
 ## Drop any NA values (Daymet obs has them)
 good <- lapply(Data, is.finite)
 Data <- mapply(`[`, Data, good)
-time <- mapply(`[`, time, good)
+btime <- mapply(`[`, atime, good)
+
+## copy attributes back onto time so we have calendar, etc.
+time <- mapply(copyatts, atime, btime)
+rm(atime, btime)
+
 
 
 ## Calculate month & year
