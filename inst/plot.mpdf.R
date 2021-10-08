@@ -71,6 +71,12 @@ Data <- tcat(Data)
 time <- tcat(time)
 
 
+## Drop any NA values (Daymet obs has them)
+good <- lapply(Data, is.finite)
+Data <- mapply(`[`, Data, good)
+time <- mapply(`[`, time, good)
+
+
 ## Calculate month & year
 ## (Not proper months, just 1/12 of the year length)
 
