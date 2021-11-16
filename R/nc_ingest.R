@@ -37,7 +37,7 @@
 ##' 
 ##' @seealso \code{\link{atsign}}
 ##' 
-##' @importFrom ncdf4 nc_open ncvar_get ncatt_get
+##' @importFrom ncdf4 nc_open ncvar_get ncatt_get nc_close
 ##' 
 ##' @export
 
@@ -115,6 +115,11 @@ nc_ingest <- function(netcdf, globalatts=FALSE){
         }
     }
 
+    ## close filehandle
+    if(class(netcdf) != "ncdf4"){
+        nc <- nc_close(nc)
+    }
+    
     class(x) <- "nc"
     return(x)
 }
