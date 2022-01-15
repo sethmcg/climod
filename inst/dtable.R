@@ -328,13 +328,18 @@ if(plev) {
 }
     
 for (V in levels(dframe$variable)){
+
+    sdf <- dframe[dframe$variable == V,]
+    if(analysis %in% c("pfit","intsp", "gev", "tmmd")){
+        sdf$variable <- NULL
+    }
+    
     for (L in LL){
 
         outfile <- paste0(outname, ".html")
         outdir  <- paste0(outname, "_files")
         caption <- gsub(".", " ", basename(outname), fixed=TRUE)
 
-        sdf <- dframe[dframe$variable == V,]
         
         if(plev){
             v <- paste0('.', V, sub("p", "", L))
