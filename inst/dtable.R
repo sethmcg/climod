@@ -28,11 +28,6 @@ load_all("~/Desktop/climod")
 #args <- c("pfit",
 #          "~/Desktop/fig/raw2/all/metrics",
 #          "test.pfit")
-#args <- c("mpdf",
-#          "lowbar/mpdf/metrics",
-#          "upper-atm.SGP.mpdf",
-#          "variable.level.scenario.GCM.RCM.drop.years.drop.lon.lat.drop",
-#          FALSE)
 args <- c("pfit",
           "data",
           "pfit.metrics",
@@ -42,7 +37,7 @@ args <- c("pfit",
 
 
 ## Comment out this line for testing
-#args <- commandArgs(trailingOnly=TRUE)
+args <- commandArgs(trailingOnly=TRUE)
 
 analysis <- args[1]
 indir    <- args[2]
@@ -138,40 +133,12 @@ colnames(categoricals) <- cnames[keep]
 categoricals$scenario <- relevel(categoricals$scenario, ref="obs")
 
 
-# ### OLD:
-# 
-# ## Model filenames look like: dir/var.scen.GCM.RCM.loc.nc
-# ## Obs data filenames look like: dir/var.obs.dataset.loc.nc
-# 
-# fields <- strsplit(basename(ddf$infile), ".", fixed=TRUE)
-# 
-# ## Obs: drop last field (.nc)
-# obsfields <- lapply(fields, `[`, -5)
-# 
-# ## Model: drop last field, combine RCM & GCM into dataset
-# modfields <- lapply(fields, function(x){c(x[1], x[2], paste0(x[4],'.',x[3]), x[5])})
-# 
-# 
-# ## Use grepl instead of grep (returns logical vector instead of
-# ## indices) her because there may be no obs at all, in which case grep
-# ## would return 0, and array[-0] = array[0] = nothing.
-# obsmask <- grepl("obs", ddf$infile)
-# modmask <- !obsmask
-# 
-# catlist <- list()
-# catlist[obsmask] <- obsfields[obsmask]
-# catlist[modmask] <- modfields[modmask]
-# 
-# 
-# ## Convert into a dataframe
-# categoricals <- as.data.frame(t(as.matrix(catlist)))
-# colnames(categoricals) <- c("variable", "scenario", "dataset", "location")
-
-## Add column with links to analyses
+## Add column with links to analysis figures
 links <- ddf$infile
 
-
+## create the categorical dataframe
 dframe <- cbind(categoricals, ddf[,c(-1,-3)])
+
 
 
 ## if period is monthly, change column name and sort correctly
@@ -198,14 +165,6 @@ if(length(unique(dframe$period)) == 1) {
 ## drop any factor levels that are now unused
 dframe <- droplevels(dframe)
 
-# ## initial sort by categoricals
-# #sdf <- dframe[with(dframe, order(variable, scenario, location, dataset)), ]
-# sdf <- dframe[with(dframe, order(c(colnames(categoricals),"period"))),]
-
-
-#for (v in c("variable", "scenario", "dataset", "location", "period")){
-#    sdf[[v]] <- factor(sdf[[v]])
-#}
 
 ##############################
 ## Datatable styling functions
@@ -269,10 +228,6 @@ catcolor <- function(cname, pname, bg=TRUE, ...){
             html <- html %>% formatStyle(cname, backgroundColor=style)
         } else {
             html <- html %>% formatStyle(cname, color=style)
-#                            backgroundColor=styleEqual(
-#                                levels(sdf[[cname]]),
-#                                pal(nlevels(sdf[[cname]]), pname, ...)
-#                                )
         }
     }
     return(html)
@@ -286,15 +241,9 @@ catcolor <- function(cname, pname, bg=TRUE, ...){
 ##########
 ## Color palette functions for numerical data
 
-## Background color: red-to-blue with white in the middle
-#rwbpal <- c(hsv(1, (10:1)/10, 1),
-#            "#FFFFFF",
-#            hsv(2/3, (1:10)/10, 1)
-#            )
 
+## Background color: red-to-blue with off-white in the middle
 rwbpal <- colorRampPalette(c("firebrick2","cornsilk","royalblue2"))(21)
-
-
 ## for -1:1 correlations
 redbluecorr <- styleInterval(seq(-0.95,0.95,0.1), rwbpal)
 
@@ -306,6 +255,7 @@ whitegreenskill <- styleInterval(seq(0.05, 0.95, 0.1), wgpal)
 ## and and 0:100 percentages
 whitegreenpct <- styleInterval(seq(5, 95, 10), wgpal)
 
+
 ## constant-intensity rainbow for days of the year
 rainbowdoy <- styleInterval(1:365, rainbow_hcl(366, c=50, l=100))
 
@@ -313,12 +263,11 @@ rainbowdoy <- styleInterval(1:365, rainbow_hcl(366, c=50, l=100))
 
 ## Create and style the datatable
 
-## Note that different variables need to go into different datatables,
+## Note that if there are multiple variables (e.g., for
+## upper-atmosphere), they need to go into different datatables,
 ## because otherwise we can't style the numeric columns because their
-## ranges don't match.
-
-## Need some conditional looping in the case of upper-atmosphere
-## variables with pressure levels
+## ranges don't match.  We also need to conditional looping over
+## pressure levels when looking at upper-atmosphere data.
 
 plev <- length(dframe$level) > 0
 if(plev) {
@@ -376,7 +325,6 @@ for (V in levels(dframe$variable)){
                                 c("#FFFFFF","#E4E4FF","#FFFFE4","#FFE4E4")
                                 ))
         }
-
 
         html <- catcolor("dataset",  "Pastel1")
         html <- catcolor("location", "rainbow_hcl", bg=FALSE, l=50)
@@ -442,8 +390,9 @@ for (V in levels(dframe$variable)){
             }
         }
 
-        ## NOTE!  NEED TO TEST gev / pfit / tmmd!
-        ## ONLY mpdf and bean are currently tested!
+        ## NOTE!  STILL NEED TO TEST gev & tmmd!
+        ## ONLY mpdf, bean, and pfit are currently tested,
+        ## and I also need to retest everything!
 
         ## Save to file
 
