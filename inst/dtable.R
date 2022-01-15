@@ -224,12 +224,12 @@ dframe <- droplevels(dframe)
 ## applies the styling) can pass arguments through.
 
 ## color palette functions for categorical data
-pal <- function(N, pname, just=c("just","left","right","center"), reverse=FALSE){
+pal <- function(N, pname, just=c("just","left","right","center"), reverse=FALSE, ...){
     if(N == 1){ return("white") }
     if(N == 2){ return(c("beige","lightcyan")) }
     f <- ifelse(reverse, rev, I)
     if(pname %in% c("rainbow_hcl","heat_hcl","terrain_hcl","diverging_hcl")){
-        f(do.call(pname, list(N)))
+        f(do.call(pname, list(n=N, ...)))
     } else {
         just <- match.arg(just)
         ## justified colormap
@@ -345,15 +345,21 @@ for (V in levels(dframe$variable)){
             sdf <- dframe[dframe$level == L,]
         }
         
-            
-        ## Background-color styling for categorical columns
+
+        ## Define CSS to apply to entire table via JS callbacks
+        css <- JS("function(settings, json) {
+            $('body').css({'font-family': 'sans-serif'});
+            $('body').css({'font-weight': 500});
+            }")
 
         html <- datatable(sdf,
-                          options = list(paging=FALSE),
+                          options = list(paging=FALSE, initComplete=css),
                           rownames=FALSE,
                           caption=caption,
                           filter="top"
-                          )
+)
+        
+        ## Background-color styling for categorical columns
 
         ## scenario has special custom coloring
         
@@ -368,7 +374,7 @@ for (V in levels(dframe$variable)){
 
 
         html <- catcolor("dataset",  "Pastel1")
-        html <- catcolor("location", "rainbow_hcl", bg=FALSE)
+        html <- catcolor("location", "rainbow_hcl", bg=FALSE, l=50)
         html <- catcolor("month",    "rainbow_hcl")
         html <- catcolor("RCM",      "Pastel1",  just="right")
         html <- catcolor("GCM",      "Pastel1",  just="left")
