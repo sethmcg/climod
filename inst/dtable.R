@@ -6,11 +6,18 @@ load_all("~/Desktop/climod")
 
 
 
-## Call as: Rscript dtable.R analysis indir outname
+## Call as: Rscript dtable.R analysis indir outname [pattern [obsfill]]
 
 ## analysis = type of analysis (pfit, gev, etc.)
 ## indir    = directory where metrics files (type.*.txt) are found
 ## outname  = name of output files (out.html & out_files/)
+##
+## pattern  = pattern of filename components in metrics files.
+##            These become the categorical columns in the data table.
+##            Any elements named "drop" will be omitted from the table.
+##
+## obsfill = components to fill with "obs" in pattern for obs files.
+##           (An obs file is one with "obs" as a component somewhere.)
 
 ## Note: if you only want some of the files in the directory, just run
 ## it for everything and filter them out in the datatable.
@@ -21,14 +28,21 @@ load_all("~/Desktop/climod")
 #args <- c("pfit",
 #          "~/Desktop/fig/raw2/all/metrics",
 #          "test.pfit")
-args <- c("mpdf",
-          "lowbar/mpdf/metrics",
-          "upper-atm.SGP.mpdf",
-          "variable.level.scenario.GCM.RCM.drop.years.drop.lon.lat.drop",
-          FALSE)
+#args <- c("mpdf",
+#          "lowbar/mpdf/metrics",
+#          "upper-atm.SGP.mpdf",
+#          "variable.level.scenario.GCM.RCM.drop.years.drop.lon.lat.drop",
+#          FALSE)
+args <- c("pfit",
+          "data",
+          "pfit.metrics",
+          "variable.scenario.GCM.RCM.location.drop",
+          "RCM",
+          "")
+
 
 ## Comment out this line for testing
-args <- commandArgs(trailingOnly=TRUE)
+#args <- commandArgs(trailingOnly=TRUE)
 
 analysis <- args[1]
 indir    <- args[2]
@@ -38,7 +52,7 @@ outname  <- args[3]
 ## pattern for spitting filename to columns.  Components are used as
 ## column names, 'drop' columns are removed.
 
-if(length(args)<4){
+if(length(args) < 4){
     defaultpattern <- TRUE
     colpattern <- "variable.scenario.GCM.RCM.location.drop"
 } else {
@@ -46,14 +60,21 @@ if(length(args)<4){
     colpattern <- args[4]
 }
 
+## Columns to fill with "obs" for obs filenames
 
-## If true, then obs filenames have a dataset component instead of
-## RCM/GCM analogs; RCM & GCM are merged to dataset to match.
-
-if(length(args)<5){
-    merge <- TRUE
+if(length(args) < 5){
+    obsfill <- NA
 } else {
-    merge <- args[5]
+    obsfill <- unlist(strsplit(args[5], '.', fixed=TRUE))
+}
+
+## Directory where png files are found; defaults to indir.
+## If set to "", will not add png column
+
+if(length(args) < 6){
+    pngdir <- indir
+} else {
+    pngdir <- args[6]
 }
 
 
@@ -73,10 +94,13 @@ rawdata <- lapply(paste0(indir,"/",infiles), read.table,
 ## Add filenames of analysis pngs.  Need to do this there while
 ## length(links) matches length(rawdata)
 
-pngs <- paste0(dirname(indir), "/", sub("txt","png",infiles))
-
-xdata <- mapply(function(x,y){cbind(x,png=y)}, rawdata, pngs, SIMPLIFY=FALSE)
-rawdf <- do.call(rbind, xdata)
+if(pngdir == "") {
+    rawdf <- do.call(rbind, rawdata)
+} else {
+    pngs <- paste0(dirname(pngdir), "/", sub("txt","png",infiles))
+    xdata <- mapply(function(x,y){cbind(x,png=y)}, rawdata, pngs, SIMPLIFY=FALSE)
+    rawdf <- do.call(rbind, xdata)
+}
 
 
 ## The first three columns are filename, period, and analysis.
@@ -97,6 +121,13 @@ ddf <- rawdf[!duplicated(rawdf[,1:3]),]
 fields <- strsplit(basename(ddf$infile), ".", fixed=TRUE)
 
 cnames <- unlist(strsplit(basename(colpattern), ".", fixed=TRUE))
+
+## fill missing obs fields
+for(i in grep("obs", fields)){
+    obsfield <- rep("obs", length(cnames))
+    obsfield[!(cnames %in% obsfill)] <- fields[[i]]
+    fields[[i]] <- obsfield
+}
 
 keep <- !grepl("drop", cnames)
 
@@ -154,9 +185,14 @@ if("location" %in% colnames(dframe)){
     dframe <- dframe[!dframe$location == "nodata",]
 }
 
-## Drop obs for analyses where all metrics are relative to obs
+## drop obs for analyses where all metrics are relative to obs
 if(analysis %in% c("mpdf", "pfit", "tmmd")){
     dframe <- dframe[dframe$scenario != "obs",]
+}
+
+## drop period column if all values are equal (e.g., pfit & tmmd)
+if(length(unique(dframe$period)) == 1) {
+    dframe$period <- NULL
 }
 
 ## drop any factor levels that are now unused
@@ -189,6 +225,8 @@ dframe <- droplevels(dframe)
 
 ## color palette functions for categorical data
 pal <- function(N, pname, just=c("just","left","right","center"), reverse=FALSE){
+    if(N == 1){ return("white") }
+    if(N == 2){ return(c("beige","lightcyan")) }
     f <- ifelse(reverse, rev, I)
     if(pname %in% c("rainbow_hcl","heat_hcl","terrain_hcl","diverging_hcl")){
         f(do.call(pname, list(N)))
@@ -222,16 +260,20 @@ pal <- function(N, pname, just=c("just","left","right","center"), reverse=FALSE)
 }
 
 
-## Function to apply background color styling to categorical columns
-catcolor <- function(cname, pname, ...){
+## Function to apply color styling to categorical columns
+catcolor <- function(cname, pname, bg=TRUE, ...){
     if(cname %in% colnames(sdf)){
-        html <- html %>%
-            formatStyle(cname,
-                        backgroundColor=styleEqual(
-                            levels(sdf[[cname]]),
-                            pal(nlevels(sdf[[cname]]), pname, ...)
-                            )
-                        )        
+        x <- sdf[[cname]]
+        style <- styleEqual(levels(x), pal(nlevels(x), pname, ...))
+        if(bg){
+            html <- html %>% formatStyle(cname, backgroundColor=style)
+        } else {
+            html <- html %>% formatStyle(cname, color=style)
+#                            backgroundColor=styleEqual(
+#                                levels(sdf[[cname]]),
+#                                pal(nlevels(sdf[[cname]]), pname, ...)
+#                                )
+        }
     }
     return(html)
 }
@@ -245,10 +287,14 @@ catcolor <- function(cname, pname, ...){
 ## Color palette functions for numerical data
 
 ## Background color: red-to-blue with white in the middle
-rwbpal <- c(hsv(1, (10:1)/10, 1),
-            "#FFFFFF",
-            hsv(2/3, (1:10)/10, 1)
-            )
+#rwbpal <- c(hsv(1, (10:1)/10, 1),
+#            "#FFFFFF",
+#            hsv(2/3, (1:10)/10, 1)
+#            )
+
+rwbpal <- colorRampPalette(c("firebrick2","cornsilk","royalblue2"))(21)
+
+
 ## for -1:1 correlations
 redbluecorr <- styleInterval(seq(-0.95,0.95,0.1), rwbpal)
 
@@ -271,20 +317,35 @@ rainbowdoy <- styleInterval(1:365, rainbow_hcl(366, c=50, l=100))
 ## because otherwise we can't style the numeric columns because their
 ## ranges don't match.
 
-## (Figure out how to deal with the normal case of no 1 var / no levels later)
+## Need some conditional looping in the case of upper-atmosphere
+## variables with pressure levels
 
+plev <- length(dframe$level) > 0
+if(plev) {
+    LL <- levels(dframe$level)
+} else {
+    LL <- NA
+}
+    
 for (V in levels(dframe$variable)){
-    for (L in levels(dframe$level)){
+    for (L in LL){
 
-        v <- paste0(V, sub("p","",L))
+        outfile <- paste0(outname, ".html")
+        outdir  <- paste0(outname, "_files")
+        caption <- gsub(".", " ", basename(outname), fixed=TRUE)
 
-        outfile <- paste0(outname, ".", v, ".html")
-        outdir  <- paste0(outname, ".", v, "_files")
-        caption <- paste0(gsub(".", " ", basename(outname), fixed=TRUE), " ", V, " ", L)
-
-        sdf <- dframe[dframe$variable == V & dframe$level == L,]
-
-
+        sdf <- dframe[dframe$variable == V,]
+        
+        if(plev){
+            v <- paste0('.', V, sub("p", "", L))
+            outfile <- paste0(outname, v, ".html")
+            outdir  <- paste0(outname, v, "_files")
+            caption <- paste(caption, V, L)
+            
+            sdf <- dframe[dframe$level == L,]
+        }
+        
+            
         ## Background-color styling for categorical columns
 
         html <- datatable(sdf,
@@ -307,8 +368,8 @@ for (V in levels(dframe$variable)){
 
 
         html <- catcolor("dataset",  "Pastel1")
-        html <- catcolor("location", "rainbow_hcl")
-        html <- catcolor("month", "rainbow_hcl")
+        html <- catcolor("location", "rainbow_hcl", bg=FALSE)
+        html <- catcolor("month",    "rainbow_hcl")
         html <- catcolor("RCM",      "Pastel1",  just="right")
         html <- catcolor("GCM",      "Pastel1",  just="left")
         html <- catcolor("lat",      "RdBu",     just="center")
